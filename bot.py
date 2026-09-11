@@ -1106,10 +1106,35 @@ async def result_command(message: Message):
 # =========================
 # RUN BOT
 # =========================
+async def auto_lock_matches():
 
+    while True:
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(Match).where(
+                    Match.is_finished == False,
+                    Match.is_locked == False,
+                    Match.start_time <= datetime.now()
+                )
+            )
+
+            matches = result.scalars().all()
+
+            for match in matches:
+                match.is_locked = True
+
+            if matches:
+                await session.commit()
+
+        await asyncio.sleep(30)
 async def main():
 
     await init_db()
+    asyncio.create_task(
+    auto_lock_matches()
+    )
 
     print("Bot is running...")
 
