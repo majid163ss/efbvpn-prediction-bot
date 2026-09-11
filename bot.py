@@ -789,7 +789,7 @@ async def select_match(callback):
         locked = (
             match.is_locked
             or match.is_finished
-            or datetime.now() >= match.start_time
+            or datetime.now(IRAN_TIMEZONE).replace(tzinfo=None) >= match.start_time
         )
 
         if locked:
@@ -869,7 +869,7 @@ async def prediction_handler(message: Message):
         locked = (
             match.is_locked
             or match.is_finished
-            or datetime.now() >= match.start_time
+            or datetime.now(IRAN_TIMEZONE).replace(tzinfo=None) >= match.start_time
         )
 
         if locked:
@@ -1117,7 +1117,7 @@ async def auto_lock_matches():
                 select(Match).where(
                     Match.is_finished == False,
                     Match.is_locked == False,
-                    Match.start_time <= datetime.now()
+                    Match.start_time <= datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
                 )
             )
 
