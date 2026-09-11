@@ -660,7 +660,7 @@ async def select_match(callback):
     await callback.answer()
 
 
-@dp.message()
+@dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
 async def prediction_handler(message: Message):
     try:
         parts = message.text.split("-")
