@@ -462,8 +462,6 @@ async def show_leaderboard(message: Message):
             text,
             reply_markup=main_menu()
         )
-
-
 # =========================
 # MY PREDICTIONS
 # =========================
