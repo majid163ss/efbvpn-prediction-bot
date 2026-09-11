@@ -649,7 +649,7 @@ async def select_match(callback):
             )
 
             return
-
+pending_match[callback.from_user.id] = match.id
         await callback.message.answer(
             f"🎯 پیش‌بینی بازی:\n\n"
             f"⚽ {match.home_team} "
