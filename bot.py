@@ -693,6 +693,25 @@ async def admin_add_match_callback(callback):
         )
         return
 
+    pending_match[callback.from_user.id] = "admin_add_match"
+
+    await callback.message.answer(
+        "➕ افزودن بازی\n\n"
+        "فرمت ارسال:\n\n"
+        "Barcelona|Real Madrid|2026-09-13 21:00\n\n"
+        "مثال:\n"
+        "Inter|Milan|2026-09-13 22:30"
+    )
+
+    await callback.answer()
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
     await callback.message.answer(
         "➕ افزودن بازی\n\n"
         "فرمت ارسال:\n\n"
