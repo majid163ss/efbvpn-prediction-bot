@@ -222,17 +222,11 @@ def main_menu():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-    InlineKeyboardButton(
-        text="📊 پیش‌بینی‌های من",
-        callback_data="mine"
-    )
-],
-[
-    InlineKeyboardButton(
-        text="👤 پروفایل من",
-        callback_data="profile"
-    )
-],
+                InlineKeyboardButton(
+                    text="🎯 پیش‌بینی بازی‌ها",
+                    callback_data="matches"
+                )
+            ],
             [
                 InlineKeyboardButton(
                     text="🏆 جدول امتیازات",
@@ -240,12 +234,28 @@ def main_menu():
                 )
             ],
             [
-    InlineKeyboardButton(
-        text="🏆 لیگ این هفته",
-        callback_data="weekly"
-    )
-],
+                InlineKeyboardButton(
+                    text="🏆 لیگ این هفته",
+                    callback_data="weekly"
+                )
+            ],
             [
+                InlineKeyboardButton(
+                    text="📊 پیش‌بینی‌های من",
+                    callback_data="mine"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👤 پروفایل من",
+                    callback_data="profile"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📜 قوانین",
+                    callback_data="rules"
+                )
             ]
         ]
     )
@@ -254,6 +264,8 @@ def main_menu():
 # =========================
 # POINT SYSTEM
 # =========================
+
+خط "def calculate_points(" که بعدش میاد باید سر جاش باقی بمونه.
 
 def calculate_points(
     predicted_home,
