@@ -378,58 +378,26 @@ async def show_leaderboard(message: Message):
 
     async with Session() as session:
 
-        now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
-
-        start_of_week = now - timedelta(
-            days=now.weekday(),
-            hours=now.hour,
-            minutes=now.minute,
-            seconds=now.second,
-            microseconds=now.microsecond
-        )
-
-        end_of_week = start_of_week + timedelta(days=7)
-
         result = await session.execute(
-            select(
-                User,
-                func.coalesce(
-                    func.sum(Prediction.points),
-                    0
-                ).label("weekly_points")
-            )
-            .join(
-                Prediction,
-                Prediction.user_id == User.id
-            )
-            .join(
-                Match,
-                Match.id == Prediction.match_id
-            )
-            .where(
-                Match.start_time >= start_of_week,
-                Match.start_time < end_of_week,
-                Match.is_finished == True
-            )
-            .group_by(User.id)
+            select(User)
             .order_by(
-                func.sum(Prediction.points).desc()
+                User.total_points.desc()
             )
             .limit(20)
         )
 
-        rows = result.all()
+        users = result.scalars().all()
 
-        if not rows:
+        if not users:
 
             await message.answer(
-                "🏆 هنوز امتیازی در این هفته ثبت نشده.",
+                "🏆 هنوز امتیازی ثبت نشده.",
                 reply_markup=main_menu()
             )
 
             return
 
-        text = "🏆 جدول امتیازات این هفته\n\n"
+        text = "🏆 جدول امتیازات\n\n"
 
         medals = {
             1: "🥇",
@@ -437,8 +405,8 @@ async def show_leaderboard(message: Message):
             3: "🥉"
         }
 
-        for index, (user, weekly_points) in enumerate(
-            rows,
+        for index, user in enumerate(
+            users,
             start=1
         ):
 
@@ -455,13 +423,16 @@ async def show_leaderboard(message: Message):
 
             text += (
                 f"{medal} {name}\n"
-                f"   ⭐ {weekly_points} امتیاز\n\n"
+                f"   ⭐ {user.total_points} امتیاز\n\n"
             )
 
         await message.answer(
             text,
             reply_markup=main_menu()
         )
+
+
+
 # =========================
 # MY PREDICTIONS
 # =========================
