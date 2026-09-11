@@ -436,7 +436,13 @@ async def show_leaderboard(message: Message):
             text,
             reply_markup=main_menu()
         )
-
+@dp.callback_query(F.data == "weekly")
+async def weekly_callback(callback):
+    await callback.message.answer(
+        "🏆 لیگ این هفته\n\n"
+        "⏳ این بخش در حال آماده‌سازی است."
+    )
+    await callback.answer()
 
 
 # =========================
