@@ -682,6 +682,26 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+
+@dp.callback_query(F.data == "admin_add_match")
+async def admin_add_match_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    await callback.message.answer(
+        "➕ افزودن بازی\n\n"
+        "فرمت ارسال:\n\n"
+        "Barcelona|Real Madrid|2026-09-13 21:00\n\n"
+        "مثال:\n"
+        "Inter|Milan|2026-09-13 22:30"
+    )
+
+    await callback.answer()
 # =========================
 # CALLBACKS
 # =========================
