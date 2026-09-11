@@ -216,7 +216,6 @@ async def get_user(
 # =========================
 # MAIN MENU
 # =========================
-
 def main_menu():
 
     return InlineKeyboardMarkup(
@@ -255,6 +254,12 @@ def main_menu():
                 InlineKeyboardButton(
                     text="📜 قوانین",
                     callback_data="rules"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⚙️ پنل مدیریت",
+                    callback_data="admin_panel"
                 )
             ]
         ]
