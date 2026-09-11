@@ -757,8 +757,36 @@ async def weekly_callback(callback):
         await callback.answer()
         return
 
-text = "🏆 لیگ این هفته\n\n"
-medals = {
+    text = "🏆 لیگ این هفته\n\n"
+
+    text += "👑 برندگان این هفته\n\n"
+
+    winner_medals = {
+        1: "🥇",
+        2: "🥈",
+        3: "🥉"
+    }
+
+    for index, (user, weekly_points) in enumerate(
+        rows[:3],
+        start=1
+    ):
+
+        name = (
+            user.first_name
+            or user.username
+            or "کاربر"
+        )
+
+        text += (
+            f"{winner_medals[index]} {name} — "
+            f"⭐ {weekly_points} امتیاز\n"
+        )
+
+    text += "\n━━━━━━━━━━━━━━\n\n"
+    text += "📊 جدول لیگ\n\n"
+
+    medals = {
         1: "🥇",
         2: "🥈",
         3: "🥉"
