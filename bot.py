@@ -245,6 +245,12 @@ def main_menu():
                 )
             ],
             [
+    InlineKeyboardButton(
+        text="🏆 لیگ این هفته",
+        callback_data="weekly"
+    )
+],
+            [
             ]
         ]
     )
