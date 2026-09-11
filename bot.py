@@ -397,13 +397,28 @@ async def show_leaderboard(message: Message):
 
         text = "🏆 جدول امتیازات\n\n"
 
+        medals = {
+            1: "🥇",
+            2: "🥈",
+            3: "🥉"
+        }
+
         for index, user in enumerate(users, start=1):
 
-            name = user.first_name or user.username or "کاربر"
+            medal = medals.get(
+                index,
+                f"{index}."
+            )
+
+            name = (
+                user.first_name
+                or user.username
+                or "کاربر"
+            )
 
             text += (
-                f"{index}. {name} — "
-                f"{user.total_points} امتیاز\n"
+                f"{medal} {name}\n"
+                f"   ⭐ {user.total_points} امتیاز\n\n"
             )
 
         await message.answer(
