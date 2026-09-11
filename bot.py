@@ -630,7 +630,58 @@ async def leaderboard_command(message: Message):
 
     await show_leaderboard(message)
 
+@dp.callback_query(F.data == "admin_panel")
+async def admin_panel_callback(callback):
 
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن بازی",
+                    callback_data="admin_add_match"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 مدیریت بازی‌ها",
+                    callback_data="admin_matches"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏁 ثبت نتیجه",
+                    callback_data="admin_result"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👥 آمار کاربران",
+                    callback_data="admin_stats"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "⚙️ پنل مدیریت\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 # =========================
 # CALLBACKS
 # =========================
