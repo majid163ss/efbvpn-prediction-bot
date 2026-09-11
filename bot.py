@@ -645,7 +645,7 @@ async def check_membership_callback(callback):
 @dp.callback_query(F.data == "matches")
 async def matches_callback(callback):
 
-    await callback.message.delete()
+   # await callback.message.delete()
 
     await show_matches(
         callback.message
