@@ -17,6 +17,7 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     UniqueConstraint,
+    func,
     select,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -711,76 +712,84 @@ async def weekly_callback(callback):
 
     end_of_week = start_of_week + timedelta(days=7)
 
-    await callback.message.delete()
-
-    await callback.message.answer(
-        "🏆 لیگ این هفته\n\n"
-        f"📅 شروع: {start_of_week.strftime('%Y/%m/%d')}\n"
-        f"📅 پایان: {(end_of_week - timedelta(seconds=1)).strftime('%Y/%m/%d')}\n\n"
-        "⏳ جدول امتیازات در مرحله بعد اضافه میشه.",
-        reply_markup=main_menu()
-    )
-
-    await callback.answer()
-@dp.callback_query(F.data == "mine")
-async def mine_callback(callback):
-
-    await callback.message.delete()
-
     async with Session() as session:
 
         result = await session.execute(
             select(
+                User,
+                func.coalesce(
+                    func.sum(Prediction.points),
+                    0
+                ).label("weekly_points")
+            )
+            .join(
                 Prediction,
-                Match
+                Prediction.user_id == User.id
             )
             .join(
                 Match,
-                Prediction.match_id == Match.id
-            )
-            .join(
-                User,
-                Prediction.user_id == User.id
+                Match.id == Prediction.match_id
             )
             .where(
-                User.telegram_id == callback.from_user.id
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week,
+                Match.is_finished == True
             )
+            .group_by(User.id)
             .order_by(
-                Match.start_time.desc()
+                func.sum(Prediction.points).desc()
             )
             .limit(20)
         )
 
         rows = result.all()
 
-        if not rows:
+    await callback.message.delete()
 
-            await callback.message.answer(
-                "📊 هنوز هیچ پیش‌بینی‌ای ثبت نکردی.",
-                reply_markup=main_menu()
-            )
-
-            await callback.answer()
-            return
-
-        text = "📊 پیش‌بینی‌های من\n\n"
-
-        for prediction, match in rows:
-
-            text += (
-                f"⚽ {match.home_team} - "
-                f"{match.away_team}\n"
-                f"🎯 پیش‌بینی: "
-                f"{prediction.home_pred} - "
-                f"{prediction.away_pred}\n"
-                f"🏆 امتیاز: "
-                f"{prediction.points}\n\n"
-            )
+    if not rows:
 
         await callback.message.answer(
-            text,
+            "🏆 لیگ این هفته\n\n"
+            "هنوز امتیازی برای این هفته ثبت نشده.",
             reply_markup=main_menu()
         )
+
+        await callback.answer()
+        return
+
+    text = "🏆 لیگ این هفته\n\n"
+
+    medals = {
+        1: "🥇",
+        2: "🥈",
+        3: "🥉"
+    }
+
+    for index, (user, weekly_points) in enumerate(
+        rows,
+        start=1
+    ):
+
+        medal = medals.get(
+            index,
+            f"{index}."
+        )
+
+        name = (
+            user.first_name
+            or user.username
+            or "کاربر"
+        )
+
+        text += (
+            f"{medal} {name}\n"
+            f"   ⭐ {weekly_points} امتیاز\n\n"
+        )
+
+    await callback.message.answer(
+        text,
+        reply_markup=main_menu()
+    )
 
     await callback.answer()
 
