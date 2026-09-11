@@ -568,13 +568,62 @@ async def mine_callback(callback):
 
     await callback.message.delete()
 
-    await show_my_predictions(
-        callback.message
-    )
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                Prediction,
+                Match
+            )
+            .join(
+                Match,
+                Prediction.match_id == Match.id
+            )
+            .join(
+                User,
+                Prediction.user_id == User.id
+            )
+            .where(
+                User.telegram_id == callback.from_user.id
+            )
+            .order_by(
+                Match.start_time.desc()
+            )
+            .limit(20)
+        )
+
+        rows = result.all()
+
+        if not rows:
+
+            await callback.message.answer(
+                "📊 هنوز هیچ پیش‌بینی‌ای ثبت نکردی.",
+                reply_markup=main_menu()
+            )
+
+            await callback.answer()
+            return
+
+        text = "📊 پیش‌بینی‌های من\n\n"
+
+        for prediction, match in rows:
+
+            text += (
+                f"⚽ {match.home_team} - "
+                f"{match.away_team}\n"
+                f"🎯 پیش‌بینی: "
+                f"{prediction.home_pred} - "
+                f"{prediction.away_pred}\n"
+                f"🏆 امتیاز: "
+                f"{prediction.points}\n\n"
+            )
+
+        await callback.message.answer(
+            text,
+            reply_markup=main_menu()
+        )
 
     await callback.answer()
-
-
 @dp.callback_query(F.data == "rules")
 async def rules_callback(callback):
 
