@@ -692,7 +692,17 @@ async def leaderboard_callback(callback):
 
     await callback.answer()
 
+@dp.callback_query(F.data == "weekly")
+async def weekly_callback(callback):
 
+    await callback.message.delete()
+
+    await callback.message.answer(
+        "🏆 لیگ این هفته\n\n"
+        "⏳ سیستم لیگ هفتگی در حال آماده‌سازی است..."
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "mine")
 async def mine_callback(callback):
 
