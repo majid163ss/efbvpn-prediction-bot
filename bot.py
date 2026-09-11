@@ -695,11 +695,30 @@ async def leaderboard_callback(callback):
 @dp.callback_query(F.data == "weekly")
 async def weekly_callback(callback):
 
+    now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
+
+    days_since_saturday = (now.weekday() + 2) % 7
+
+    start_of_week = (
+        now
+        - timedelta(days=days_since_saturday)
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    end_of_week = start_of_week + timedelta(days=7)
+
     await callback.message.delete()
 
     await callback.message.answer(
         "🏆 لیگ این هفته\n\n"
-        "⏳ سیستم لیگ هفتگی در حال آماده‌سازی است..."
+        f"📅 شروع: {start_of_week.strftime('%Y/%m/%d')}\n"
+        f"📅 پایان: {(end_of_week - timedelta(seconds=1)).strftime('%Y/%m/%d')}\n\n"
+        "⏳ جدول امتیازات در مرحله بعد اضافه میشه.",
+        reply_markup=main_menu()
     )
 
     await callback.answer()
