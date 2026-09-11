@@ -611,94 +611,37 @@ async def rules_callback(callback):
 @dp.callback_query(
     F.data.startswith("match:")
 )
-async def select_match(callback):
-
-    match_id = int(
-        callback.data.split(":")[1]
-    )
-
-    async with Session() as session:
-
-        result = await session.execute(
-            select(Match).where(
-                Match.id == match_id
-            )
-        )
-
-        match = result.scalar_one_or_none()
-
-        if not match:
-
-            await callback.answer(
-                "بازی پیدا نشد.",
-                show_alert=True
-            )
-
-            return
-
-        locked = (
-            match.is_locked
-            or datetime.now() >= match.start_time
-        )
-
-        if locked:
-
-            await callback.answer(
-                "🔒 زمان پیش‌بینی این بازی تمام شده.",
-                show_alert=True
-            )
-
-            return
-pending_match[callback.from_user.id] = match.id
-        await callback.message.answer(
-            f"🎯 پیش‌بینی بازی:\n\n"
-            f"⚽ {match.home_team} "
-            f"🆚 "
-            f"{match.away_team}\n\n"
-            f"نتیجه رو به این شکل بفرست:\n"
-            f"مثلاً:\n"
-            f"2-1"
-        )
-
-    await callback.answer()
-
-
-# =========================
-# PREDICTION
-# =========================
-
 @dp.message(
     F.text.regexp(r"^\d+\s*-\s*\d+$")
 )
 async def prediction_handler(message: Message):
 
     try:
-
         parts = message.text.split("-")
 
-        home_pred = int(
-            parts[0].strip()
-        )
-
-        away_pred = int(
-            parts[1].strip()
-        )
+        home_pred = int(parts[0].strip())
+        away_pred = int(parts[1].strip())
 
     except Exception:
-
         await message.answer(
             "❌ فرمت پیش‌بینی درست نیست.\n"
             "مثال: 2-1"
         )
-
         return
 
     if home_pred > 30 or away_pred > 30:
-
         await message.answer(
             "❌ نتیجه واردشده معتبر نیست."
         )
+        return
 
+    user_id = message.from_user.id
+    match_id = pending_match.get(user_id)
+
+    if not match_id:
+        await message.answer(
+            "❌ اول یک بازی رو از بخش «🎯 پیش‌بینی بازی‌ها» انتخاب کن."
+        )
         return
 
     async with Session() as session:
@@ -709,31 +652,39 @@ async def prediction_handler(message: Message):
         )
 
         result = await session.execute(
-            select(Match)
-            .where(
-                Match.is_finished == False,
-                Match.is_locked == False,
-                Match.start_time > datetime.now()
-            )
-            .order_by(
-                Match.start_time
+            select(Match).where(
+                Match.id == match_id
             )
         )
 
-        match = result.scalars().first()
+        match = result.scalar_one_or_none()
 
         if not match:
+            pending_match.pop(user_id, None)
 
             await message.answer(
-                "❌ در حال حاضر بازی فعالی برای پیش‌بینی وجود ندارد.",
+                "❌ بازی پیدا نشد.",
                 reply_markup=main_menu()
             )
+            return
 
+        locked = (
+            match.is_locked
+            or match.is_finished
+            or datetime.now() >= match.start_time
+        )
+
+        if locked:
+            pending_match.pop(user_id, None)
+
+            await message.answer(
+                "🔒 زمان پیش‌بینی این بازی تمام شده.",
+                reply_markup=main_menu()
+            )
             return
 
         result = await session.execute(
-            select(Prediction)
-            .where(
+            select(Prediction).where(
                 Prediction.user_id == user.id,
                 Prediction.match_id == match.id
             )
@@ -760,6 +711,8 @@ async def prediction_handler(message: Message):
 
         await session.commit()
 
+        pending_match.pop(user_id, None)
+
         await message.answer(
             f"✅ پیش‌بینی ثبت شد!\n\n"
             f"⚽ {match.home_team} "
@@ -768,6 +721,7 @@ async def prediction_handler(message: Message):
             f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
             reply_markup=main_menu()
         )
+        
 
 
 # =========================
