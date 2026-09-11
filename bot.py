@@ -240,12 +240,6 @@ def main_menu():
                 )
             ],
             [
-                InlineKeyboardButton(
-                    text="📊 پیش‌بینی‌های من",
-                    callback_data="mine"
-                )
-            ],
-            [
     InlineKeyboardButton(
         text="🏆 لیگ این هفته",
         callback_data="weekly"
