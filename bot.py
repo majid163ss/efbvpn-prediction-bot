@@ -757,7 +757,7 @@ async def weekly_callback(callback):
         await callback.answer()
         return
 
-    text = "🏆 لیگ این هفته\n\n"
+text = "🏆 لیگ این هفته\n\n"
 
 winner = rows[0][0]
 winner_points = rows[0][1]
