@@ -3,21 +3,30 @@ import asyncio
 from datetime import datetime
 
 from dotenv import load_dotenv
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from sqlalchemy import (
-    String, Integer, DateTime, Boolean,
-    ForeignKey, UniqueConstraint, select
+    String,
+    Integer,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    UniqueConstraint,
+    select,
 )
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
-    AsyncSession
+    AsyncSession,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+# =========================
+# SETTINGS
+# =========================
 
 load_dotenv()
 
@@ -27,24 +36,16 @@ DATABASE_URL = os.getenv(
     "sqlite+aiosqlite:///./bot.db"
 )
 
-CHANNEL_USERNAME = os.getenv(
-    "CHANNEL_USERNAME",
-    "@EFbVpn"
-)
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@EFbVpn")
 
 ADMIN_IDS = {
     int(x.strip())
-    for x in os.getenv(
-        "ADMIN_IDS",
-        os.getenv("ADMIN_ID", "")
-    ).split(",")
+    for x in os.getenv("ADMIN_IDS", "").split(",")
     if x.strip().isdigit()
 }
 
-
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is missing")
-
 
 engine = create_async_engine(
     DATABASE_URL,
@@ -56,6 +57,10 @@ Session = async_sessionmaker(
     expire_on_commit=False
 )
 
+
+# =========================
+# DATABASE MODELS
+# =========================
 
 class Base(DeclarativeBase):
     pass
@@ -76,12 +81,12 @@ class User(Base):
     )
 
     username: Mapped[str | None] = mapped_column(
-        String(255),
+        String(100),
         nullable=True
     )
 
     first_name: Mapped[str | None] = mapped_column(
-        String(255),
+        String(100),
         nullable=True
     )
 
@@ -100,11 +105,11 @@ class Match(Base):
     )
 
     home_team: Mapped[str] = mapped_column(
-        String(255)
+        String(100)
     )
 
     away_team: Mapped[str] = mapped_column(
-        String(255)
+        String(100)
     )
 
     start_time: Mapped[datetime] = mapped_column(
@@ -164,41 +169,53 @@ class Prediction(Base):
     __table_args__ = (
         UniqueConstraint(
             "user_id",
-            "match_id",
-            name="uq_prediction"
+            "match_id"
         ),
     )
-  async def init_db():
+
+
+# =========================
+# DATABASE
+# =========================
+
+async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
 async def get_user(
     session: AsyncSession,
-    tg_id: int,
-    username: str | None,
-    first_name: str | None
+    message: Message
 ):
     result = await session.execute(
-        select(User).where(User.telegram_id == tg_id)
+        select(User).where(
+            User.telegram_id == message.from_user.id
+        )
     )
 
     user = result.scalar_one_or_none()
 
     if not user:
         user = User(
-            telegram_id=tg_id,
-            username=username,
-            first_name=first_name
+            telegram_id=message.from_user.id,
+            username=message.from_user.username,
+            first_name=message.from_user.first_name,
+            total_points=0,
         )
 
         session.add(user)
         await session.commit()
+        await session.refresh(user)
 
     return user
 
 
+# =========================
+# MAIN MENU
+# =========================
+
 def main_menu():
+
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -229,49 +246,58 @@ def main_menu():
     )
 
 
-def is_admin(telegram_id: int):
-    return telegram_id in ADMIN_IDS
-
+# =========================
+# POINT SYSTEM
+# =========================
 
 def calculate_points(
-    predicted_home: int,
-    predicted_away: int,
-    real_home: int,
-    real_away: int
+    predicted_home,
+    predicted_away,
+    real_home,
+    real_away
 ):
-    # نتیجه دقیق
+
+    # Exact score
     if (
         predicted_home == real_home
         and predicted_away == real_away
     ):
         return 5
 
-    # تفاضل گل دقیق
-    if (
+    predicted_diff = (
         predicted_home - predicted_away
-        ==
+    )
+
+    real_diff = (
         real_home - real_away
-    ):
+    )
+
+    # Exact goal difference
+    if predicted_diff == real_diff:
         return 4
 
+    # Correct result
     predicted_result = (
-        (predicted_home > predicted_away)
-        -
-        (predicted_home < predicted_away)
+        1 if predicted_diff > 0
+        else -1 if predicted_diff < 0
+        else 0
     )
 
     real_result = (
-        (real_home > real_away)
-        -
-        (real_home < real_away)
+        1 if real_diff > 0
+        else -1 if real_diff < 0
+        else 0
     )
 
-    # برد / مساوی / باخت درست
     if predicted_result == real_result:
         return 3
 
     return 0
 
+
+# =========================
+# SHOW MATCHES
+# =========================
 
 async def show_matches(message: Message):
 
@@ -282,51 +308,67 @@ async def show_matches(message: Message):
             .where(
                 Match.is_finished == False
             )
-            .order_by(Match.start_time)
+            .order_by(
+                Match.start_time
+            )
         )
 
         matches = result.scalars().all()
 
-    if not matches:
+        if not matches:
+
+            await message.answer(
+                "⚽ فعلاً بازی‌ای برای پیش‌بینی وجود نداره.",
+                reply_markup=main_menu()
+            )
+
+            return
+
+        buttons = []
+
+        for match in matches:
+
+            locked = (
+                match.is_locked
+                or datetime.now() >= match.start_time
+            )
+
+            status = "🔒" if locked else "🎯"
+
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text=(
+                            f"{status} "
+                            f"{match.home_team} "
+                            f"🆚 "
+                            f"{match.away_team}"
+                        ),
+                        callback_data=f"match:{match.id}"
+                    )
+                ]
+            )
+
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        )
 
         await message.answer(
-            "⚽ فعلاً بازی‌ای برای پیش‌بینی ثبت نشده.",
-            reply_markup=main_menu()
-        )
-
-        return
-
-    buttons = []
-
-    for match in matches:
-
-        status = "🔒" if match.is_locked else "🎯"
-
-        buttons.append([
-            InlineKeyboardButton(
-                text=(
-                    f"{status} "
-                    f"{match.home_team} - "
-                    f"{match.away_team}"
-                ),
-                callback_data=f"match:{match.id}"
+            "🎯 بازی موردنظر رو انتخاب کن:",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=buttons
             )
-        ])
-
-    buttons.append([
-        InlineKeyboardButton(
-            text="🔙 منوی اصلی",
-            callback_data="home"
         )
-    ])
 
-    await message.answer(
-        "🎯 بازی موردنظر را انتخاب کن:",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=buttons
-        )
-    )
 
+# =========================
+# LEADERBOARD
+# =========================
 
 async def show_leaderboard(message: Message):
 
@@ -334,54 +376,58 @@ async def show_leaderboard(message: Message):
 
         result = await session.execute(
             select(User)
-            .order_by(User.total_points.desc())
+            .order_by(
+                User.total_points.desc()
+            )
             .limit(20)
         )
 
         users = result.scalars().all()
 
-    if not users:
+        if not users:
+
+            await message.answer(
+                "🏆 هنوز امتیازی ثبت نشده.",
+                reply_markup=main_menu()
+            )
+
+            return
+
+        text = "🏆 جدول امتیازات\n\n"
+
+        for index, user in enumerate(users, start=1):
+
+            name = user.first_name or user.username or "کاربر"
+
+            text += (
+                f"{index}. {name} — "
+                f"{user.total_points} امتیاز\n"
+            )
 
         await message.answer(
-            "هنوز کسی امتیازی ندارد.",
+            text,
             reply_markup=main_menu()
         )
 
-        return
 
-    text = "🏆 <b>جدول امتیازات</b>\n\n"
+# =========================
+# MY PREDICTIONS
+# =========================
 
-    for position, user in enumerate(users, 1):
-
-        if user.username:
-            name = f"@{user.username}"
-        else:
-            name = user.first_name or "کاربر"
-
-        text += (
-            f"{position}. "
-            f"{name} — "
-            f"<b>{user.total_points}</b> امتیاز\n"
-        )
-
-    await message.answer(
-        text,
-        reply_markup=main_menu(),
-        parse_mode="HTML"
-    )
-  async def show_my_predictions(message: Message):
+async def show_my_predictions(message: Message):
 
     async with Session() as session:
 
         user = await get_user(
             session,
-            message.from_user.id,
-            message.from_user.username,
-            message.from_user.first_name
+            message
         )
 
         result = await session.execute(
-            select(Prediction, Match)
+            select(
+                Prediction,
+                Match
+            )
             .join(
                 Match,
                 Prediction.match_id == Match.id
@@ -392,80 +438,75 @@ async def show_leaderboard(message: Message):
             .order_by(
                 Match.start_time.desc()
             )
+            .limit(20)
         )
 
         rows = result.all()
 
-    if not rows:
+        if not rows:
+
+            await message.answer(
+                "📊 هنوز هیچ پیش‌بینی‌ای ثبت نکردی.",
+                reply_markup=main_menu()
+            )
+
+            return
+
+        text = "📊 پیش‌بینی‌های من\n\n"
+
+        for prediction, match in rows:
+
+            text += (
+                f"⚽ {match.home_team} - "
+                f"{match.away_team}\n"
+                f"🎯 پیش‌بینی: "
+                f"{prediction.home_pred} - "
+                f"{prediction.away_pred}\n"
+                f"🏆 امتیاز: "
+                f"{prediction.points}\n\n"
+            )
 
         await message.answer(
-            "📊 هنوز هیچ پیش‌بینی‌ای ثبت نکردی.",
+            text,
             reply_markup=main_menu()
         )
 
-        return
 
-    text = (
-        "📊 <b>پیش‌بینی‌های من</b>\n\n"
-        f"🏆 امتیاز کل: "
-        f"<b>{user.total_points}</b>\n\n"
-    )
+# =========================
+# BOT
+# =========================
 
-    for prediction, match in rows[:20]:
-
-        if match.is_finished:
-
-            real_result = (
-                f"{match.home_score}-"
-                f"{match.away_score}"
-            )
-
-        else:
-
-            real_result = "در انتظار نتیجه"
-
-        text += (
-            f"⚽ {match.home_team} - "
-            f"{match.away_team}\n"
-            f"🎯 پیش‌بینی: "
-            f"{prediction.home_pred}-"
-            f"{prediction.away_pred}\n"
-            f"📌 نتیجه: {real_result}\n"
-            f"⭐ امتیاز: {prediction.points}\n\n"
-        )
-
-    await message.answer(
-        text,
-        reply_markup=main_menu(),
-        parse_mode="HTML"
-    )
-
-
-bot = Bot(BOT_TOKEN)
+bot = Bot(
+    token=BOT_TOKEN
+)
 
 dp = Dispatcher()
 
 
+# =========================
+# START
+# =========================
+
 @dp.message(Command("start"))
-async def start_command(message: Message):
+async def start_handler(message: Message):
 
     async with Session() as session:
 
         await get_user(
             session,
-            message.from_user.id,
-            message.from_user.username,
-            message.from_user.first_name
+            message
         )
 
     await message.answer(
-        "سلام 👋\n\n"
-        "به ربات پیش‌بینی فوتبال خوش اومدی ⚽🔥\n\n"
-        "نتیجه بازی‌ها رو پیش‌بینی کن "
-        "و برای جدول امتیازات رقابت کن.",
+        "⚽ به ربات پیش‌بینی فوتبال خوش اومدی!\n\n"
+        "بازی‌ها رو انتخاب کن و نتیجه رو پیش‌بینی کن 🎯",
         reply_markup=main_menu()
     )
 
+
+# =========================
+# MATCHES COMMAND
+# =========================
 
 @dp.message(Command("matches"))
 async def matches_command(message: Message):
@@ -473,169 +514,222 @@ async def matches_command(message: Message):
     await show_matches(message)
 
 
+# =========================
+# LEADERBOARD COMMAND
+# =========================
+
 @dp.message(Command("leaderboard"))
 async def leaderboard_command(message: Message):
 
     await show_leaderboard(message)
 
 
+# =========================
+# CALLBACKS
+# =========================
+
 @dp.callback_query(F.data == "home")
-async def home_callback(call):
+async def home_callback(callback):
 
-    await call.answer()
-
-    await call.message.edit_text(
-        "🏠 <b>منوی اصلی</b>\n\n"
-        "یکی از گزینه‌های زیر رو انتخاب کن:",
-        reply_markup=main_menu(),
-        parse_mode="HTML"
+    await callback.message.edit_text(
+        "🏠 منوی اصلی:",
+        reply_markup=main_menu()
     )
+
+    await callback.answer()
 
 
 @dp.callback_query(F.data == "matches")
-async def matches_callback(call):
+async def matches_callback(callback):
 
-    await call.answer()
+    await callback.message.delete()
 
     await show_matches(
-        call.message
+        callback.message
     )
+
+    await callback.answer()
 
 
 @dp.callback_query(F.data == "leaderboard")
-async def leaderboard_callback(call):
+async def leaderboard_callback(callback):
 
-    await call.answer()
+    await callback.message.delete()
 
     await show_leaderboard(
-        call.message
+        callback.message
     )
+
+    await callback.answer()
 
 
 @dp.callback_query(F.data == "mine")
-async def mine_callback(call):
+async def mine_callback(callback):
 
-    await call.answer()
+    await callback.message.delete()
 
     await show_my_predictions(
-        call.message
+        callback.message
     )
+
+    await callback.answer()
 
 
 @dp.callback_query(F.data == "rules")
-async def rules_callback(call):
+async def rules_callback(callback):
 
-    await call.answer()
-
-    await call.message.edit_text(
-
-        "📜 <b>قوانین امتیازدهی</b>\n\n"
-
-        "🔥 نتیجه دقیق: <b>۵ امتیاز</b>\n"
-        "⚡ تفاضل گل دقیق: <b>۴ امتیاز</b>\n"
-        "✅ برد/مساوی/باخت درست: <b>۳ امتیاز</b>\n"
-        "❌ پیش‌بینی اشتباه: <b>۰ امتیاز</b>\n\n"
-
-        "🔒 بعد از شروع بازی، "
-        "امکان ثبت پیش‌بینی وجود ندارد.",
-
-        reply_markup=main_menu(),
-        parse_mode="HTML"
+    text = (
+        "📜 قوانین بازی\n\n"
+        "🎯 نتیجه دقیق: ۵ امتیاز\n"
+        "⚽ تفاضل گل دقیق: ۴ امتیاز\n"
+        "🏆 نتیجه صحیح برد/مساوی/باخت: ۳ امتیاز\n"
+        "❌ پیش‌بینی اشتباه: ۰ امتیاز\n\n"
+        "⏰ بعد از شروع بازی امکان ثبت پیش‌بینی وجود ندارد."
     )
 
+    await callback.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 بازگشت",
+                        callback_data="home"
+                    )
+                ]
+            ]
+        )
+    )
 
-@dp.callback_query(F.data.startswith("match:"))
-async def match_callback(call):
+    await callback.answer()
+
+
+# =========================
+# SELECT MATCH
+# =========================
+
+@dp.callback_query(
+    F.data.startswith("match:")
+)
+async def select_match(callback):
 
     match_id = int(
-        call.data.split(":")[1]
+        callback.data.split(":")[1]
     )
 
     async with Session() as session:
 
-        match = await session.get(
-            Match,
-            match_id
+        result = await session.execute(
+            select(Match).where(
+                Match.id == match_id
+            )
         )
 
-    if not match:
+        match = result.scalar_one_or_none()
 
-        await call.answer(
-            "❌ بازی پیدا نشد.",
-            show_alert=True
+        if not match:
+
+            await callback.answer(
+                "بازی پیدا نشد.",
+                show_alert=True
+            )
+
+            return
+
+        locked = (
+            match.is_locked
+            or datetime.now() >= match.start_time
+        )
+
+        if locked:
+
+            await callback.answer(
+                "🔒 زمان پیش‌بینی این بازی تمام شده.",
+                show_alert=True
+            )
+
+            return
+
+        await callback.message.answer(
+            f"🎯 پیش‌بینی بازی:\n\n"
+            f"⚽ {match.home_team} "
+            f"🆚 "
+            f"{match.away_team}\n\n"
+            f"نتیجه رو به این شکل بفرست:\n"
+            f"مثلاً:\n"
+            f"2-1"
+        )
+
+    await callback.answer()
+
+
+# =========================
+# PREDICTION
+# =========================
+
+@dp.message(
+    F.text.regexp(r"^\d+\s*-\s*\d+$")
+)
+async def prediction_handler(message: Message):
+
+    try:
+
+        parts = message.text.split("-")
+
+        home_pred = int(
+            parts[0].strip()
+        )
+
+        away_pred = int(
+            parts[1].strip()
+        )
+
+    except Exception:
+
+        await message.answer(
+            "❌ فرمت پیش‌بینی درست نیست.\n"
+            "مثال: 2-1"
         )
 
         return
 
-    if (
-        match.is_locked
-        or match.is_finished
-        or datetime.now() >= match.start_time
-    ):
+    if home_pred > 30 or away_pred > 30:
 
-        await call.answer(
-            "🔒 زمان پیش‌بینی این بازی تمام شده.",
-            show_alert=True
+        await message.answer(
+            "❌ نتیجه واردشده معتبر نیست."
         )
 
         return
-
-    await call.answer()
-
-    await call.message.answer(
-        f"🎯 پیش‌بینی برای:\n\n"
-        f"<b>{match.home_team} - "
-        f"{match.away_team}</b>\n\n"
-        "نتیجه را به این شکل ارسال کن:\n"
-        "<code>2-1</code>",
-        parse_mode="HTML"
-    )
-  @dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
-async def receive_prediction(message: Message):
-
-    predicted_home, predicted_away = [
-        int(x.strip())
-        for x in message.text.split("-", 1)
-    ]
 
     async with Session() as session:
 
         user = await get_user(
             session,
-            message.from_user.id,
-            message.from_user.username,
-            message.from_user.first_name
+            message
         )
 
         result = await session.execute(
             select(Match)
             .where(
                 Match.is_finished == False,
-                Match.is_locked == False
+                Match.is_locked == False,
+                Match.start_time > datetime.now()
             )
-            .order_by(Match.start_time)
+            .order_by(
+                Match.start_time
+            )
         )
 
-        matches = result.scalars().all()
+        match = result.scalars().first()
 
-        now = datetime.now()
-
-        matches = [
-            match
-            for match in matches
-            if match.start_time > now
-        ]
-
-        if not matches:
+        if not match:
 
             await message.answer(
-                "❌ فعلاً بازی فعالی برای ثبت پیش‌بینی وجود ندارد.",
+                "❌ در حال حاضر بازی فعالی برای پیش‌بینی وجود ندارد.",
                 reply_markup=main_menu()
             )
 
             return
-
-        match = matches[0]
 
         result = await session.execute(
             select(Prediction)
@@ -649,40 +743,46 @@ async def receive_prediction(message: Message):
 
         if prediction:
 
-            prediction.home_pred = predicted_home
-            prediction.away_pred = predicted_away
-
-            text = "✏️ پیش‌بینی‌ات ویرایش شد."
+            prediction.home_pred = home_pred
+            prediction.away_pred = away_pred
 
         else:
 
             prediction = Prediction(
                 user_id=user.id,
                 match_id=match.id,
-                home_pred=predicted_home,
-                away_pred=predicted_away
+                home_pred=home_pred,
+                away_pred=away_pred,
+                points=0
             )
 
             session.add(prediction)
 
-            text = "✅ پیش‌بینی با موفقیت ثبت شد."
-
         await session.commit()
 
-    await message.answer(
-        f"{text}\n\n"
-        f"⚽ {match.home_team} "
-        f"<b>{predicted_home}-{predicted_away}</b> "
-        f"{match.away_team}",
-        reply_markup=main_menu(),
-        parse_mode="HTML"
-    )
+        await message.answer(
+            f"✅ پیش‌بینی ثبت شد!\n\n"
+            f"⚽ {match.home_team} "
+            f"{home_pred} - {away_pred} "
+            f"{match.away_team}\n\n"
+            f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
+            reply_markup=main_menu()
+        )
 
+
+# =========================
+# ADMIN - ADD MATCH
+# =========================
 
 @dp.message(Command("addmatch"))
-async def add_match_command(message: Message):
+async def add_match(message: Message):
 
-    if not is_admin(message.from_user.id):
+    if message.from_user.id not in ADMIN_IDS:
+
+        await message.answer(
+            "⛔ این دستور فقط برای ادمین است."
+        )
+
         return
 
     raw = message.text.replace(
@@ -691,24 +791,34 @@ async def add_match_command(message: Message):
         1
     ).strip()
 
-    try:
+    parts = raw.split("|")
 
-        home, away, date_text = [
-            x.strip()
-            for x in raw.split("|")
-        ]
+    if len(parts) != 3:
+
+        await message.answer(
+            "❌ فرمت صحیح:\n\n"
+            "/addmatch Barcelona|Real Madrid|2026-09-12 21:00"
+        )
+
+        return
+
+    home_team = parts[0].strip()
+    away_team = parts[1].strip()
+    date_text = parts[2].strip()
+
+    try:
 
         start_time = datetime.strptime(
             date_text,
             "%Y-%m-%d %H:%M"
         )
 
-    except Exception:
+    except ValueError:
 
         await message.answer(
-            "❌ فرمت اشتباه است.\n\n"
+            "❌ تاریخ درست نیست.\n"
             "مثال:\n"
-            "/addmatch Barcelona|Real Madrid|2026-09-12 21:00"
+            "2026-09-12 21:00"
         )
 
         return
@@ -716,65 +826,77 @@ async def add_match_command(message: Message):
     async with Session() as session:
 
         match = Match(
-            home_team=home,
-            away_team=away,
-            start_time=start_time
+            home_team=home_team,
+            away_team=away_team,
+            start_time=start_time,
+            is_locked=False,
+            is_finished=False
         )
 
         session.add(match)
 
         await session.commit()
 
-        match_id = match.id
-
     await message.answer(
-        f"✅ بازی با موفقیت اضافه شد.\n\n"
-        f"🆔 شماره بازی: {match_id}\n"
-        f"⚽ {home} - {away}\n"
-        f"🕐 {date_text}"
+        "✅ بازی با موفقیت اضافه شد."
     )
 
+
+# =========================
+# ADMIN - RESULT
+# =========================
 
 @dp.message(Command("result"))
 async def result_command(message: Message):
 
-    if not is_admin(message.from_user.id):
-        return
-
-    parts = message.text.split()
-
-    if len(parts) != 3 or "-" not in parts[2]:
+    if message.from_user.id not in ADMIN_IDS:
 
         await message.answer(
-            "❌ فرمت درست:\n\n"
-            "/result 1 3-1"
+            "⛔ این دستور فقط برای ادمین است."
+        )
+
+        return
+
+    raw = message.text.replace(
+        "/result",
+        "",
+        1
+    ).strip()
+
+    parts = raw.split()
+
+    if len(parts) != 3:
+
+        await message.answer(
+            "❌ فرمت صحیح:\n\n"
+            "/result 1 2 1"
         )
 
         return
 
     try:
 
-        match_id = int(parts[1])
+        match_id = int(parts[0])
+        home_score = int(parts[1])
+        away_score = int(parts[2])
 
-        real_home, real_away = [
-            int(x)
-            for x in parts[2].split("-", 1)
-        ]
-
-    except Exception:
+    except ValueError:
 
         await message.answer(
-            "❌ نتیجه واردشده اشتباه است."
+            "❌ اعداد واردشده صحیح نیستند."
         )
 
         return
 
     async with Session() as session:
 
-        match = await session.get(
-            Match,
-            match_id
+        result = await session.execute(
+            select(Match).where(
+                Match.id == match_id
+            )
         )
+
+        match = result.scalar_one_or_none()
 
         if not match:
 
@@ -784,23 +906,14 @@ async def result_command(message: Message):
 
             return
 
-        if match.is_finished:
-
-            await message.answer(
-                "⚠️ این بازی قبلاً نتیجه‌گذاری شده."
-            )
-
-            return
-
-        match.home_score = real_home
-        match.away_score = real_away
-        match.is_locked = True
+        match.home_score = home_score
+        match.away_score = away_score
         match.is_finished = True
+        match.is_locked = True
 
         result = await session.execute(
-            select(Prediction)
-            .where(
-                Prediction.match_id == match_id
+            select(Prediction).where(
+                Prediction.match_id == match.id
             )
         )
 
@@ -811,16 +924,19 @@ async def result_command(message: Message):
             points = calculate_points(
                 prediction.home_pred,
                 prediction.away_pred,
-                real_home,
-                real_away
+                home_score,
+                away_score
             )
 
             prediction.points = points
 
-            user = await session.get(
-                User,
-                prediction.user_id
+            user_result = await session.execute(
+                select(User).where(
+                    User.id == prediction.user_id
+                )
             )
+
+            user = user_result.scalar_one_or_none()
 
             if user:
 
@@ -829,12 +945,16 @@ async def result_command(message: Message):
         await session.commit()
 
     await message.answer(
-        f"✅ نتیجه ثبت شد.\n\n"
+        f"✅ نتیجه ثبت شد:\n\n"
         f"⚽ {match.home_team} "
-        f"<b>{real_home}-{real_away}</b> "
+        f"{home_score} - {away_score} "
         f"{match.away_team}"
     )
 
+
+# =========================
+# RUN BOT
+# =========================
 
 async def main():
 
@@ -842,7 +962,9 @@ async def main():
 
     print("Bot is running...")
 
-    await dp.start_polling(bot)
+    await dp.start_polling(
+        bot
+    )
 
 
 if __name__ == "__main__":
