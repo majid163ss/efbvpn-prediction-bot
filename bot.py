@@ -611,9 +611,7 @@ async def rules_callback(callback):
 @dp.callback_query(
     F.data.startswith("match:")
 )
-@dp.message(
-    F.text.regexp(r"^\d+\s*-\s*\d+$")
-)
+@dp.message()
 async def prediction_handler(message: Message):
 
     try:
