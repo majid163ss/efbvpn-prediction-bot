@@ -481,7 +481,7 @@ bot = Bot(
 )
 
 dp = Dispatcher()
-
+pending_match = {}
 
 # =========================
 # START
