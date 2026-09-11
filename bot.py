@@ -483,13 +483,81 @@ bot = Bot(
 
 dp = Dispatcher()
 pending_match = {}
+REQUIRED_CHANNEL = "@EFbVpn"
+REQUIRED_GROUP = "@EFbVpn_Gp"
+
+
+async def is_member(bot, user_id, chat_username):
+
+    try:
+        member = await bot.get_chat_member(
+            chat_username,
+            user_id
+        )
+
+        return member.status in {
+            ChatMemberStatus.MEMBER,
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.CREATOR
+        }
+
+    except Exception:
+        return False
 
 # =========================
 # START
 # =========================
 
 @dp.message(Command("start"))
+@dp.message(Command("start"))
 async def start_handler(message: Message):
+
+    channel_member = await is_member(
+        bot,
+        message.from_user.id,
+        REQUIRED_CHANNEL
+    )
+
+    group_member = await is_member(
+        bot,
+        message.from_user.id,
+        REQUIRED_GROUP
+    )
+
+    if not channel_member or not group_member:
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="📢 عضویت در کانال",
+                        url="https://t.me/EFbVpn"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="👥 عضویت در گروه",
+                        url="https://t.me/EFbVpn_Gp"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✅ بررسی عضویت",
+                        callback_data="check_membership"
+                    )
+                ]
+            ]
+        )
+
+        await message.answer(
+            "🔐 برای استفاده از ربات باید در هر دو عضو باشی.\n\n"
+            "1️⃣ وارد کانال شو\n"
+            "2️⃣ وارد گروه شو\n"
+            "3️⃣ سپس روی «✅ بررسی عضویت» بزن",
+            reply_markup=keyboard
+        )
+
+        return
 
     async with Session() as session:
 
@@ -503,12 +571,6 @@ async def start_handler(message: Message):
         "بازی‌ها رو انتخاب کن و نتیجه رو پیش‌بینی کن 🎯",
         reply_markup=main_menu()
     )
-
-
-# =========================
-# MATCHES COMMAND
-# =========================
-
 @dp.message(Command("matches"))
 async def matches_command(message: Message):
 
@@ -539,7 +601,46 @@ async def home_callback(callback):
 
     await callback.answer()
 
+@dp.callback_query(F.data == "check_membership")
+async def check_membership_callback(callback):
 
+    channel_member = await is_member(
+        bot,
+        callback.from_user.id,
+        REQUIRED_CHANNEL
+    )
+
+    group_member = await is_member(
+        bot,
+        callback.from_user.id,
+        REQUIRED_GROUP
+    )
+
+    if not channel_member or not group_member:
+
+        await callback.answer(
+            "❌ هنوز در هر دو عضو نشدی.",
+            show_alert=True
+        )
+
+        return
+
+    await callback.message.delete()
+
+    async with Session() as session:
+
+        user = await get_user(
+            session,
+            callback.message
+        )
+
+    await callback.message.answer(
+        "✅ عضویتت تأیید شد!\n\n"
+        "⚽ حالا می‌تونی از ربات استفاده کنی.",
+        reply_markup=main_menu()
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "matches")
 async def matches_callback(callback):
 
