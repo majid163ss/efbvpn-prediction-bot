@@ -245,10 +245,6 @@ def main_menu():
                 )
             ],
             [
-                InlineKeyboardButton(
-                    text="📜 قوانین",
-                    callback_data="rules"
-                )
             ]
         ]
     )
