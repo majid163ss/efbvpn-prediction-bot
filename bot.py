@@ -265,7 +265,7 @@ def main_menu():
 # POINT SYSTEM
 # =========================
 
-خط "def calculate_points(" که بعدش میاد باید سر جاش باقی بمونه.
+
 
 def calculate_points(
     predicted_home,
