@@ -750,9 +750,7 @@ async def mine_callback(callback):
     await callback.answer()
     @dp.callback_query(F.data == "profile")
 async def profile_callback(callback):
-
     async with Session() as session:
-
         result = await session.execute(
             select(User).where(
                 User.telegram_id == callback.from_user.id
@@ -769,8 +767,7 @@ async def profile_callback(callback):
             return
 
         rank_result = await session.execute(
-            select(User.telegram_id)
-            .where(
+            select(User.telegram_id).where(
                 User.total_points > user.total_points
             )
         )
@@ -778,8 +775,7 @@ async def profile_callback(callback):
         rank = len(rank_result.all()) + 1
 
         prediction_result = await session.execute(
-            select(Prediction)
-            .where(
+            select(Prediction).where(
                 Prediction.user_id == user.id
             )
         )
