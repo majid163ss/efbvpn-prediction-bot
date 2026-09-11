@@ -332,7 +332,7 @@ async def show_matches(message: Message):
 
             locked = (
                 match.is_locked
-                or datetime.now() >= match.start_time
+                or datetime.now(IRAN_TIMEZONE).replace(tzinfo=None) >= match.start_time
             )
 
             status = "🔒" if locked else "🎯"
