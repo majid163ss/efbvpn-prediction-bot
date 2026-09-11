@@ -758,16 +758,7 @@ async def weekly_callback(callback):
         return
 
     text = "🏆 لیگ این هفته\n\n"
-    
-if rows:
-    winner = rows[0][0]
-    winner_points = rows[0][1]
 
-    text += (
-        f"👑 نفر اول هفته: {winner.first_name or winner.username or 'کاربر'}\n"
-        f"⭐ امتیاز: {winner_points}\n\n"
-    )
-    
     medals = {
         1: "🥇",
         2: "🥈",
@@ -801,6 +792,8 @@ if rows:
     )
 
     await callback.answer()
+
+        
 
 
 @dp.callback_query(F.data == "profile")
