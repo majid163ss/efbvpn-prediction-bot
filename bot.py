@@ -611,9 +611,57 @@ async def rules_callback(callback):
 @dp.callback_query(
     F.data.startswith("match:")
 )
+async def select_match(callback):
+
+    match_id = int(
+        callback.data.split(":")[1]
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(
+                Match.id == match_id
+            )
+        )
+
+        match = result.scalar_one_or_none()
+
+        if not match:
+            await callback.answer(
+                "❌ بازی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        locked = (
+            match.is_locked
+            or match.is_finished
+            or datetime.now() >= match.start_time
+        )
+
+        if locked:
+            await callback.answer(
+                "🔒 زمان پیش‌بینی این بازی تمام شده.",
+                show_alert=True
+            )
+            return
+
+        pending_match[callback.from_user.id] = match.id
+
+        await callback.message.answer(
+            f"🎯 پیش‌بینی بازی:\n\n"
+            f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+            f"نتیجه رو به این شکل بفرست:\n"
+            f"مثلاً:\n"
+            f"2-1"
+        )
+
+    await callback.answer()
+
+
 @dp.message()
 async def prediction_handler(message: Message):
-
     try:
         parts = message.text.split("-")
 
