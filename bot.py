@@ -748,10 +748,16 @@ async def mine_callback(callback):
         )
 
     await callback.answer()
-    @dp.callback_query(F.data == "profile")
+
+
+@dp.callback_query(F.data == "profile")
 async def profile_callback(callback):
-    await callback.message.answer("👤 پروفایل من فعلاً در حال آماده‌سازی است.")
+    await callback.message.answer(
+        "👤 پروفایل من فعلاً در حال آماده‌سازی است."
+    )
     await callback.answer()
+
+
 @dp.callback_query(F.data == "rules")
 async def rules_callback(callback):
 
