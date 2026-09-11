@@ -517,6 +517,10 @@ bot = Bot(
 )
 
 dp = Dispatcher()
+
+ADMIN_IDS = {6833441844, 1116170821}
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
 pending_match = {}
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
