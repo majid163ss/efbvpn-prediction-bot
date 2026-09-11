@@ -750,53 +750,7 @@ async def mine_callback(callback):
     await callback.answer()
     @dp.callback_query(F.data == "profile")
 async def profile_callback(callback):
-    async with Session() as session:
-        result = await session.execute(
-            select(User).where(
-                User.telegram_id == callback.from_user.id
-            )
-        )
-
-        user = result.scalar_one_or_none()
-
-        if not user:
-            await callback.answer(
-                "❌ پروفایل پیدا نشد.",
-                show_alert=True
-            )
-            return
-
-        rank_result = await session.execute(
-            select(User.telegram_id).where(
-                User.total_points > user.total_points
-            )
-        )
-
-        rank = len(rank_result.all()) + 1
-
-        prediction_result = await session.execute(
-            select(Prediction).where(
-                Prediction.user_id == user.id
-            )
-        )
-
-        predictions = prediction_result.scalars().all()
-
-        total_predictions = len(predictions)
-
-        text = (
-            "👤 پروفایل من\n\n"
-            f"👋 {user.first_name or 'کاربر'}\n\n"
-            f"🏆 رتبه: {rank}\n"
-            f"⭐ امتیاز: {user.total_points}\n"
-            f"🎯 تعداد پیش‌بینی: {total_predictions}\n"
-        )
-
-        await callback.message.answer(
-            text,
-            reply_markup=main_menu()
-        )
-
+    await callback.message.answer("👤 پروفایل من فعلاً در حال آماده‌سازی است.")
     await callback.answer()
 @dp.callback_query(F.data == "rules")
 async def rules_callback(callback):
