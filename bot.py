@@ -752,12 +752,83 @@ async def mine_callback(callback):
 
 @dp.callback_query(F.data == "profile")
 async def profile_callback(callback):
-    await callback.message.answer(
-        "👤 پروفایل من فعلاً در حال آماده‌سازی است."
-    )
+    async with Session() as session:
+
+        result = await session.execute(
+            select(User).where(
+                User.telegram_id == callback.from_user.id
+            )
+        )
+
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await callback.answer(
+                "❌ پروفایل پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        rank_result = await session.execute(
+            select(User.telegram_id).where(
+                User.total_points > user.total_points
+            )
+        )
+
+        rank = len(rank_result.all()) + 1
+
+        prediction_result = await session.execute(
+            select(Prediction).where(
+                Prediction.user_id == user.id
+            )
+        )
+
+        predictions = prediction_result.scalars().all()
+
+        total_predictions = len(predictions)
+
+        correct_predictions = sum(
+            1 for p in predictions
+            if p.points >= 3
+        )
+
+        exact_predictions = sum(
+            1 for p in predictions
+            if p.points == 5
+        )
+
+        success_rate = (
+            round((correct_predictions / total_predictions) * 100)
+            if total_predictions > 0
+            else 0
+        )
+
+        text = (
+            "👤 پروفایل من\n\n"
+            f"👋 {user.first_name or 'کاربر'}\n\n"
+            f"🏆 رتبه: {rank}\n"
+            f"⭐ مجموع امتیاز: {user.total_points}\n\n"
+            f"🎯 کل پیش‌بینی‌ها: {total_predictions}\n"
+            f"✅ پیش‌بینی‌های درست: {correct_predictions}\n"
+            f"🎯 نتایج دقیق: {exact_predictions}\n"
+            f"📈 درصد موفقیت: {success_rate}%"
+        )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="home"
+                        )
+                    ]
+                ]
+            )
+        )
+
     await callback.answer()
-
-
 @dp.callback_query(F.data == "rules")
 async def rules_callback(callback):
 
