@@ -2,7 +2,7 @@ import os
 import asyncio
 from datetime import datetime
 from zoneinfo import ZoneInfo
-
+IRAN_TIMEZONE = ZoneInfo("Asia/Tehran")
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, F
