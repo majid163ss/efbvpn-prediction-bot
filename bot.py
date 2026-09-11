@@ -221,11 +221,17 @@ def main_menu():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(
-                    text="🎯 پیش‌بینی بازی‌ها",
-                    callback_data="matches"
-                )
-            ],
+    InlineKeyboardButton(
+        text="📊 پیش‌بینی‌های من",
+        callback_data="mine"
+    )
+],
+[
+    InlineKeyboardButton(
+        text="👤 پروفایل من",
+        callback_data="profile"
+    )
+],
             [
                 InlineKeyboardButton(
                     text="🏆 جدول امتیازات",
