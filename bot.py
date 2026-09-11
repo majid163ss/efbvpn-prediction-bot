@@ -721,6 +721,65 @@ async def admin_add_match_callback(callback):
     )
 
     await callback.answer()
+
+@dp.message(F.text.contains("|"))
+async def admin_add_match_message(message: Message):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    if pending_match.get(message.from_user.id) != "admin_add_match":
+        return
+
+    parts = message.text.split("|")
+
+    if len(parts) != 3:
+        await message.answer(
+            "❌ فرمت اشتباه است.\n\n"
+            "مثال:\n"
+            "Barcelona|Real Madrid|2026-09-13 21:00"
+        )
+        return
+
+    home_team = parts[0].strip()
+    away_team = parts[1].strip()
+    date_text = parts[2].strip()
+
+    try:
+        start_time = datetime.strptime(
+            date_text,
+            "%Y-%m-%d %H:%M"
+        )
+    except ValueError:
+        await message.answer(
+            "❌ تاریخ درست نیست.\n\n"
+            "مثال:\n"
+            "2026-09-13 21:00"
+        )
+        return
+
+    async with Session() as session:
+
+        match = Match(
+            home_team=home_team,
+            away_team=away_team,
+            start_time=start_time,
+            is_locked=False,
+            is_finished=False
+        )
+
+        session.add(match)
+        await session.commit()
+        await session.refresh(match)
+
+    pending_match.pop(message.from_user.id, None)
+
+    await message.answer(
+        f"✅ بازی با موفقیت اضافه شد.\n\n"
+        f"⚽ {home_team} 🆚 {away_team}\n"
+        f"🆔 شماره بازی: {match.id}\n"
+        f"⏰ {date_text}"
+    )
 # =========================
 # CALLBACKS
 # =========================
