@@ -759,6 +759,13 @@ async def weekly_callback(callback):
 
     text = "🏆 لیگ این هفته\n\n"
 
+winner = rows[0][0]
+winner_points = rows[0][1]
+
+text += (
+    f"👑 نفر اول هفته: {winner.first_name or winner.username or 'کاربر'}\n"
+    f"⭐ امتیاز: {winner_points}\n\n"
+)
     medals = {
         1: "🥇",
         2: "🥈",
