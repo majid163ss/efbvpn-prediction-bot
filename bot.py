@@ -758,7 +758,7 @@ async def weekly_callback(callback):
         return
 
 text = "🏆 لیگ این هفته\n\n"
-    medals = {
+medals = {
         1: "🥇",
         2: "🥈",
         3: "🥉"
