@@ -664,10 +664,15 @@ async def start_handler(message: Message):
             message
         )
 
-    await message.answer(
+        await message.answer(
         "⚽ به ربات پیش‌بینی فوتبال خوش اومدی!\n\n"
         "بازی‌ها رو انتخاب کن و نتیجه رو پیش‌بینی کن 🎯",
         reply_markup=main_menu()
+    )
+
+    await message.answer(
+        "☰ برای باز کردن منوی اصلی، از دکمه پایین استفاده کن.",
+        reply_markup=persistent_menu()
     )
 @dp.message(Command("matches"))
 async def matches_command(message: Message):
