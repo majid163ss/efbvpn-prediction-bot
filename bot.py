@@ -1740,6 +1740,7 @@ async def select_match(callback):
     await callback.answer()
 
 @dp.message(F.photo)
+@dp.message(F.photo)
 async def gallery_photo_handler(message: Message):
 
     user_id = message.from_user.id
@@ -1747,7 +1748,17 @@ async def gallery_photo_handler(message: Message):
     if not is_admin(user_id):
         return
 
-    if pending_match.get(user_id) != "admin_add_gallery":
+    pending = pending_match.get(user_id)
+
+    if not isinstance(pending, str):
+        return
+
+    if not pending.startswith("admin_gallery_player:"):
+        return
+
+    player_name = pending.split(":", 1)[1].strip()
+
+    if not player_name:
         return
 
     photo = message.photo[-1]
@@ -1758,6 +1769,7 @@ async def gallery_photo_handler(message: Message):
 
         image = GalleryImage(
             file_id=photo.file_id,
+            player_name=player_name,
             caption=caption
         )
 
@@ -1767,8 +1779,8 @@ async def gallery_photo_handler(message: Message):
     pending_match.pop(user_id, None)
 
     await message.answer(
-        "✅ مکس با موفقیت ذخیره شد! 🎮🔥\n\n"
-        "کاربران می‌تونن از بخش «🎮 مکس‌های eFootball» ببیننش."
+        f"✅ مکس {player_name} با موفقیت ذخیره شد! 🎮🔥\n\n"
+        "کاربران می‌تونن با جستجوی اسم بازیکن پیداش کنن."
     )
 @dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
 async def prediction_handler(message: Message):
