@@ -705,15 +705,6 @@ async def admin_add_match_callback(callback):
 
     await callback.answer()
 
-        "➕ افزودن بازی\n\n"
-        "فرمت ارسال:\n\n"
-        "Barcelona|Real Madrid|2026-09-13 21:00\n\n"
-        "مثال:\n"
-        "Inter|Milan|2026-09-13 22:30"
-    )
-
-    await callback.answer()
-
 @dp.message(F.text.contains("|"))
 async def admin_add_match_message(message: Message):
 
