@@ -705,14 +705,6 @@ async def admin_add_match_callback(callback):
 
     await callback.answer()
 
-    if not is_admin(callback.from_user.id):
-        await callback.answer(
-            "⛔ دسترسی نداری.",
-            show_alert=True
-        )
-        return
-
-    await callback.message.answer(
         "➕ افزودن بازی\n\n"
         "فرمت ارسال:\n\n"
         "Barcelona|Real Madrid|2026-09-13 21:00\n\n"
