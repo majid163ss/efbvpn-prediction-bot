@@ -1049,7 +1049,7 @@ async def delete_match_callback(callback):
         return
 
     match_id = int(callback.data.split(":")[1])
-
+await callback.answer(f"ID بازی: {match_id}", show_alert=True)
     async with Session() as session:
 
         result = await session.execute(
