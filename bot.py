@@ -269,6 +269,12 @@ def main_menu():
             ],
             [
                 InlineKeyboardButton(
+                    text="🎮 مکس‌های eFootball",
+                    callback_data="gallery"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="📜 قوانین",
                     callback_data="rules"
                 )
