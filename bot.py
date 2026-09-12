@@ -1099,6 +1099,7 @@ async def delete_match_callback(callback):
 
 @dp.callback_query(F.data.startswith("result_match:"))
 async def result_match_callback(callback):
+    print("🔥 RESULT HANDLER:", callback.data)
 
     if not is_admin(callback.from_user.id):
         await callback.answer(
