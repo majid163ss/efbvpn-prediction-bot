@@ -2343,6 +2343,8 @@ async def result_command(message: Message):
 async def auto_lock_matches():
 
     while True:
+        
+        await save_weekly_winner()
 
         async with Session() as session:
 
