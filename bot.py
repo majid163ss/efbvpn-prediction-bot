@@ -175,7 +175,8 @@ class Prediction(Base):
             "match_id"
         ),
     )
-    class GalleryImage(Base):
+
+class GalleryImage(Base):
     __tablename__ = "gallery_images"
 
     id: Mapped[int] = mapped_column(
