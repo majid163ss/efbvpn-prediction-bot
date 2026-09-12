@@ -780,6 +780,72 @@ async def admin_add_match_message(message: Message):
         f"🆔 شماره بازی: {match.id}\n"
         f"⏰ {date_text}"
     )
+    @dp.callback_query(F.data == "admin_matches")
+async def admin_matches_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match)
+            .where(Match.is_finished == False)
+            .order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+    if not matches:
+        await callback.message.edit_text(
+            "📋 هیچ بازی فعالی وجود ندارد.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="admin_panel"
+                        )
+                    ]
+                ]
+            )
+        )
+        await callback.answer()
+        return
+
+    buttons = []
+
+    for match in matches:
+
+        status = "🔒" if match.is_locked else "🟢"
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"{status} {match.home_team} 🆚 {match.away_team}",
+                callback_data=f"admin_match:{match.id}"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_panel"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "📋 مدیریت بازی‌ها\n\n"
+        "بازی موردنظر رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
 # =========================
 # CALLBACKS
 # =========================
