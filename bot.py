@@ -717,47 +717,27 @@ async def admin_panel_callback(callback):
 
     await callback.answer()
 @dp.callback_query(F.data == "admin_add_gallery")
-async def admin_add_gallery_callback(callback):
+class GalleryImage(Base):
+    __tablename__ = "gallery_images"
 
-    if not is_admin(callback.from_user.id):
-        await callback.answer(
-            "⛔ دسترسی نداری.",
-            show_alert=True
-        )
-        return
-
-    pending_match[callback.from_user.id] = "admin_add_gallery"
-
-    await callback.message.answer(
-        "🎮 افزودن مکس eFootball\n\n"
-        "حالا عکس رو همراه با توضیح بفرست.\n\n"
-        "مثال:\n"
-        "📷 عکس مکس\n"
-        "🎮 مکس پیشنهادی برای مسی 🔥"
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
     )
 
-    await callback.answer()
-@dp.callback_query(F.data == "admin_add_gallery")
-async def admin_add_gallery_callback(callback):
-
-    if not is_admin(callback.from_user.id):
-        await callback.answer(
-            "⛔ دسترسی نداری.",
-            show_alert=True
-        )
-        return
-
-    pending_match[callback.from_user.id] = "admin_add_gallery"
-
-    await callback.message.answer(
-        "🎮 افزودن مکس eFootball\n\n"
-        "حالا عکس رو همراه با توضیح بفرست.\n\n"
-        "مثال:\n"
-        "📷 عکس مکس\n"
-        "🎮 مکس پیشنهادی برای مسی 🔥"
+    file_id: Mapped[str] = mapped_column(
+        String(255)
     )
 
-    await callback.answer()
+    player_name: Mapped[str] = mapped_column(
+        String(100),
+        index=True
+    )
+
+    caption: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True
+    )
 @dp.callback_query(F.data == "admin_result")
 async def admin_result_callback(callback):
 
