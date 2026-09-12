@@ -169,6 +169,10 @@ class Prediction(Base):
     away_pred: Mapped[int] = mapped_column(
         Integer
     )
+    created_at: Mapped[datetime] = mapped_column(
+    DateTime,
+    default=datetime.utcnow
+    )
 
     points: Mapped[int] = mapped_column(
         Integer,
