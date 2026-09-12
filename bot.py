@@ -181,7 +181,26 @@ class Prediction(Base):
             "match_id"
         ),
     )
+class WeeklyWinner(Base):
+    __tablename__ = "weekly_winners"
 
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+
+    week_start: Mapped[datetime] = mapped_column(
+        DateTime,
+        unique=True
+    )
+
+    points: Mapped[int] = mapped_column(
+        Integer
+    )
 class GalleryImage(Base):
     __tablename__ = "gallery_images"
 
@@ -203,6 +222,7 @@ class GalleryImage(Base):
         String(1000),
         nullable=True
     )
+    
 
 
 # =========================
