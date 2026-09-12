@@ -1848,7 +1848,13 @@ async def select_match(callback):
         )
 
     await callback.answer()
-@dp.message(F.text)
+@dp.message(
+    F.text,
+    lambda message: pending_match.get(message.from_user.id) in (
+        "admin_gallery_player",
+        "gallery_search"
+    )
+)
 async def gallery_player_name_handler(message: Message):
 
     user_id = message.from_user.id
