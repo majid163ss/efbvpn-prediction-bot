@@ -1117,13 +1117,11 @@ async def result_match_callback(callback):
     print("RESULT CALLBACK:", callback.data)
 
     async with Session() as session:
-
         result = await session.execute(
             select(Match).where(
                 Match.id == match_id
             )
         )
-
         match = result.scalar_one_or_none()
 
     if not match:
