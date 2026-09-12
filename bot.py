@@ -892,7 +892,9 @@ async def admin_match_callback(callback):
         )
         return
 
-    match_id = int(callback.data.split(":")[-1])
+    print("RESULT CALLBACK DATA:", callback.data)
+
+match_id = int(callback.data.split(":")[-1])
 
     async with Session() as session:
 
