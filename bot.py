@@ -829,6 +829,79 @@ async def admin_matches_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data.startswith("admin_match:"))
+async def admin_match_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    match_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(Match.id == match_id)
+        )
+
+        match = result.scalar_one_or_none()
+
+    if not match:
+        await callback.answer(
+            "❌ بازی پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    status = "🔒 قفل شده" if match.is_locked else "🟢 باز"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔒 قفل بازی",
+                    callback_data=f"lock_match:{match.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔓 باز کردن بازی",
+                    callback_data=f"unlock_match:{match.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏁 ثبت نتیجه",
+                    callback_data=f"result_match:{match.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑 حذف بازی",
+                    callback_data=f"delete_match:{match.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_matches"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+        f"⏰ {match.start_time}\n"
+        f"📌 وضعیت: {status}\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 # =========================
 # CALLBACKS
 # =========================
