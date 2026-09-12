@@ -896,7 +896,7 @@ async def admin_match_callback(callback):
 
     match_id = int(callback.data.split(":")[-1])
 
-        async with Session() as session:
+ async with Session() as session:
         result = await session.execute(
             select(Match).where(
                 Match.id == match_id
