@@ -1519,33 +1519,112 @@ async def select_match(callback):
 
 @dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
 async def prediction_handler(message: Message):
+
     try:
         parts = message.text.split("-")
-
-        home_pred = int(parts[0].strip())
-        away_pred = int(parts[1].strip())
-
+        home_score = int(parts[0].strip())
+        away_score = int(parts[1].strip())
     except Exception:
         await message.answer(
-            "❌ فرمت پیش‌بینی درست نیست.\n"
+            "❌ فرمت نتیجه درست نیست.\n"
             "مثال: 2-1"
         )
         return
 
-    if home_pred > 30 or away_pred > 30:
+    if home_score > 30 or away_score > 30:
         await message.answer(
             "❌ نتیجه واردشده معتبر نیست."
         )
         return
 
     user_id = message.from_user.id
-    match_id = pending_match.get(user_id)
+    pending = pending_match.get(user_id)
 
-    if not match_id:
+    if not pending:
         await message.answer(
-            "❌ اول یک بازی رو از بخش «🎯 پیش‌بینی بازی‌ها» انتخاب کن."
+            "❌ اول یک بازی رو انتخاب کن."
         )
         return
+
+    # =========================
+    # ثبت نتیجه توسط ادمین
+    # =========================
+
+    if is_admin(user_id) and isinstance(pending, str) and pending.startswith("admin_result:"):
+
+        match_id = int(pending.split(":")[1])
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(Match).where(
+                    Match.id == match_id
+                )
+            )
+
+            match = result.scalar_one_or_none()
+
+            if not match:
+                pending_match.pop(user_id, None)
+
+                await message.answer(
+                    "❌ بازی پیدا نشد."
+                )
+                return
+
+            match.home_score = home_score
+            match.away_score = away_score
+            match.is_finished = True
+            match.is_locked = True
+
+            result = await session.execute(
+                select(Prediction).where(
+                    Prediction.match_id == match.id
+                )
+            )
+
+            predictions = result.scalars().all()
+
+            for prediction in predictions:
+
+                points = calculate_points(
+                    prediction.home_pred,
+                    prediction.away_pred,
+                    home_score,
+                    away_score
+                )
+
+                prediction.points = points
+
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == prediction.user_id
+                    )
+                )
+
+                user = user_result.scalar_one_or_none()
+
+                if user:
+                    user.total_points += points
+
+            await session.commit()
+
+        pending_match.pop(user_id, None)
+
+        await message.answer(
+            f"✅ نتیجه با موفقیت ثبت شد!\n\n"
+            f"⚽ {match.home_team} "
+            f"{home_score} - {away_score} "
+            f"{match.away_team}"
+        )
+
+        return
+
+    # =========================
+    # ثبت پیش‌بینی کاربر
+    # =========================
+
+    match_id = pending
 
     async with Session() as session:
 
@@ -1597,16 +1676,16 @@ async def prediction_handler(message: Message):
 
         if prediction:
 
-            prediction.home_pred = home_pred
-            prediction.away_pred = away_pred
+            prediction.home_pred = home_score
+            prediction.away_pred = away_score
 
         else:
 
             prediction = Prediction(
                 user_id=user.id,
                 match_id=match.id,
-                home_pred=home_pred,
-                away_pred=away_pred,
+                home_pred=home_score,
+                away_pred=away_score,
                 points=0
             )
 
@@ -1619,7 +1698,7 @@ async def prediction_handler(message: Message):
         await message.answer(
             f"✅ پیش‌بینی ثبت شد!\n\n"
             f"⚽ {match.home_team} "
-            f"{home_pred} - {away_pred} "
+            f"{home_score} - {away_score} "
             f"{match.away_team}\n\n"
             f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
             reply_markup=main_menu()
