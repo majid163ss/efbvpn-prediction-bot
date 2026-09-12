@@ -763,7 +763,7 @@ async def admin_add_match_message(message: Message):
         f"🆔 شماره بازی: {match.id}\n"
         f"⏰ {date_text}"
     )
-    @dp.callback_query(F.data == "admin_matches")
+@dp.callback_query(F.data == "admin_matches")
 async def admin_matches_callback(callback):
 
     if not is_admin(callback.from_user.id):
