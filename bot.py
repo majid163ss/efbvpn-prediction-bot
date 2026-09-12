@@ -1786,29 +1786,7 @@ async def gallery_player_name_handler(message: Message):
                 caption=image.caption
             )
 
-                keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="🔎 جستجوی بازیکن دیگر",
-                callback_data="gallery"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="🔙 منوی اصلی",
-                callback_data="home"
-            )
-        ]
-    ]
-)
-
-await message.answer(
-    "🎮 گزینه بعدی رو انتخاب کن:",
-    reply_markup=keyboard
-)
-
-return
+                
 @dp.message(F.photo)
 @dp.message(F.photo)
 async def gallery_photo_handler(message: Message):
