@@ -1326,7 +1326,76 @@ async def leaderboard_callback(callback):
     )
 
     await callback.answer()
+    
+async def save_weekly_winner():
+    now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
 
+    days_since_saturday = (now.weekday() + 2) % 7
+
+    start_of_week = (
+        now - timedelta(days=days_since_saturday)
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    end_of_week = start_of_week + timedelta(days=7)
+
+    async with Session() as session:
+
+        existing = await session.execute(
+            select(WeeklyWinner).where(
+                WeeklyWinner.week_start == start_of_week
+            )
+        )
+
+        if existing.scalar_one_or_none():
+            return
+
+        result = await session.execute(
+            select(
+                User,
+                func.sum(Prediction.points).label("weekly_points")
+            )
+            .join(
+                Prediction,
+                Prediction.user_id == User.id
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week,
+                Match.is_finished == True
+            )
+            .group_by(User.id)
+            .order_by(
+                func.sum(Prediction.points).desc(),
+                User.id.asc()
+            )
+            .limit(1)
+        )
+
+        winner = result.first()
+
+        if not winner:
+            return
+
+        user, weekly_points = winner
+
+        session.add(
+            WeeklyWinner(
+                user_id=user.id,
+                week_start=start_of_week,
+                points=weekly_points
+            )
+        )
+
+        await session.commit()
 @dp.callback_query(F.data == "weekly")
 async def weekly_callback(callback):
 
