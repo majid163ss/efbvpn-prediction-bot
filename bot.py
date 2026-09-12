@@ -238,6 +238,15 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE predictions "
+                    "ADD COLUMN created_at DATETIME"
+                )
+            )
+        except Exception:
+            pass
 
 async def get_user(
     session: AsyncSession,
