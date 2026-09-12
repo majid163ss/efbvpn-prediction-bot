@@ -1808,7 +1808,7 @@ await message.answer(
     reply_markup=keyboard
 )
 
-        return
+return
 @dp.message(F.photo)
 @dp.message(F.photo)
 async def gallery_photo_handler(message: Message):
