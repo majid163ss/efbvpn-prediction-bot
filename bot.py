@@ -682,7 +682,60 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_result")
+async def admin_result_callback(callback):
 
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(
+                Match.is_finished == False
+            ).order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+    if not matches:
+        await callback.answer(
+            "❌ هیچ بازی فعالی وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    buttons = []
+
+    for match in matches:
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"⚽ {match.home_team} 🆚 {match.away_team}",
+                callback_data=f"result_match:{match.id}"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_panel"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "🏁 ثبت نتیجه\n\n"
+        "بازی موردنظر را انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_add_match")
 async def admin_add_match_callback(callback):
 
