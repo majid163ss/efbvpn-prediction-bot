@@ -1049,13 +1049,11 @@ async def delete_match_callback(callback):
         return
 
     match_id = int(callback.data.split(":")[1])
-await callback.answer(f"ID بازی: {match_id}", show_alert=True)
-    async with Session() as session:
 
+    async with Session() as session:
         result = await session.execute(
             select(Match).where(Match.id == match_id)
         )
-
         match = result.scalar_one_or_none()
 
         if not match:
@@ -1070,20 +1068,13 @@ await callback.answer(f"ID بازی: {match_id}", show_alert=True)
                 Prediction.match_id == match_id
             )
         )
-
         predictions = result.scalars().all()
 
         for prediction in predictions:
-            session.delete(prediction)
+            await session.delete(prediction)
 
-        session.delete(match)
-
+        await session.delete(match)
         await session.commit()
-
-    await callback.answer(
-        "🗑 بازی حذف شد.",
-        show_alert=True
-    )
 
     await callback.message.edit_text(
         "✅ بازی با موفقیت حذف شد.",
@@ -1098,6 +1089,8 @@ await callback.answer(f"ID بازی: {match_id}", show_alert=True)
             ]
         )
     )
+
+    await callback.answer("🗑 بازی حذف شد.")
 
 
 # =========================
