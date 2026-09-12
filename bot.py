@@ -175,6 +175,22 @@ class Prediction(Base):
             "match_id"
         ),
     )
+    class GalleryImage(Base):
+    __tablename__ = "gallery_images"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    file_id: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    caption: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True
+    )
 
 
 # =========================
