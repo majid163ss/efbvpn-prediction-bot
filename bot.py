@@ -570,6 +570,12 @@ bot = Bot(
 )
 
 dp = Dispatcher()
+@dp.message(F.text == "☰ منوی اصلی")
+async def persistent_menu_handler(message: Message):
+    await message.answer(
+        "🏠 منوی اصلی",
+        reply_markup=main_menu()
+    )
 
 ADMIN_IDS = {6833441844, 1116170821}
 def is_admin(user_id):
