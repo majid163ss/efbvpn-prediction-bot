@@ -1118,7 +1118,7 @@ async def result_match_callback(callback):
 
     match_id = int(callback.data.split(":")[-1])
 
-    print("RESULT CALLBACK:", callback.data)
+    print("RESULT CALLBACK DATA:", callback.data)
 
     async with Session() as session:
         result = await session.execute(
