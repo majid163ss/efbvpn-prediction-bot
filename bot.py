@@ -1349,6 +1349,100 @@ async def weekly_callback(callback):
     )
 
     await callback.answer()
+    @dp.callback_query(F.data == "mine")
+async def mine_callback(callback):
+
+    user_id = callback.from_user.id
+
+    async with Session() as session:
+
+        user_result = await session.execute(
+            select(User).where(
+                User.telegram_id == user_id
+            )
+        )
+
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            await callback.message.delete()
+
+            await callback.message.answer(
+                "❌ هنوز اطلاعاتی از شما ثبت نشده.",
+                reply_markup=main_menu()
+            )
+
+            await callback.answer()
+            return
+
+        result = await session.execute(
+            select(
+                Prediction,
+                Match
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
+                Prediction.user_id == user.id
+            )
+            .order_by(
+                Match.start_time.desc()
+            )
+        )
+
+        rows = result.all()
+
+    await callback.message.delete()
+
+    if not rows:
+
+        await callback.message.answer(
+            "📊 پیش‌بینی‌های من\n\n"
+            "هنوز هیچ پیش‌بینی‌ای ثبت نکردی.",
+            reply_markup=main_menu()
+        )
+
+        await callback.answer()
+        return
+
+    text = "📊 پیش‌بینی‌های من\n\n"
+
+    for prediction, match in rows:
+
+        if match.is_finished:
+            result_text = (
+                f"{match.home_score} - "
+                f"{match.away_score}"
+            )
+
+            status = (
+                f"🏁 نتیجه: {result_text}\n"
+                f"⭐ امتیاز شما: {prediction.points}"
+            )
+
+        elif match.is_locked:
+            status = "🔒 بازی شروع شده — در انتظار نتیجه"
+
+        else:
+            status = "🟢 پیش‌بینی ثبت شده"
+
+        text += (
+            f"⚽ {match.home_team} 🆚 {match.away_team}\n"
+            f"🎯 پیش‌بینی شما: "
+            f"{prediction.home_pred} - "
+            f"{prediction.away_pred}\n"
+            f"{status}\n\n"
+            f"━━━━━━━━━━━━━━\n\n"
+        )
+
+    await callback.message.answer(
+        text,
+        reply_markup=main_menu()
+    )
+
+    await callback.answer()
 
         
 
