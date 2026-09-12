@@ -2129,11 +2129,12 @@ async def prediction_handler(message: Message):
         else:
 
             prediction = Prediction(
-                user_id=user.id,
-                match_id=match.id,
-                home_pred=home_score,
-                away_pred=away_score,
-                points=0
+    user_id=user.id,
+    match_id=match.id,
+    home_pred=home_score,
+    away_pred=away_score,
+    points=0,
+    created_at=datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
             )
 
             session.add(prediction)
