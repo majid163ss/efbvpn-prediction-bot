@@ -1112,19 +1112,23 @@ async def result_match_callback(callback):
         )
         return
 
-    match_id = int(callback.data.split(":")[1])
+    match_id = int(callback.data.split(":")[-1])
+
+    print("RESULT CALLBACK:", callback.data)
 
     async with Session() as session:
 
         result = await session.execute(
-            select(Match).where(Match.id == match_id)
+            select(Match).where(
+                Match.id == match_id
+            )
         )
 
         match = result.scalar_one_or_none()
 
     if not match:
         await callback.answer(
-            "❌ بازی پیدا نشد.",
+            f"❌ بازی پیدا نشد.\nID: {match_id}",
             show_alert=True
         )
         return
@@ -1140,6 +1144,8 @@ async def result_match_callback(callback):
     )
 
     await callback.answer()
+
+
 # =========================
 # CALLBACKS
 # =========================
