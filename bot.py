@@ -1346,7 +1346,7 @@ async def save_weekly_winner():
 
     days_since_saturday = (now.weekday() + 2) % 7
 
-    start_of_week = (
+    current_week_start = (
         now - timedelta(days=days_since_saturday)
     ).replace(
         hour=0,
@@ -1355,13 +1355,14 @@ async def save_weekly_winner():
         microsecond=0
     )
 
-    end_of_week = start_of_week + timedelta(days=7)
+    previous_week_start = current_week_start - timedelta(days=7)
+    previous_week_end = current_week_start
 
     async with Session() as session:
 
         existing = await session.execute(
             select(WeeklyWinner).where(
-                WeeklyWinner.week_start == start_of_week
+                WeeklyWinner.week_start == previous_week_start
             )
         )
 
@@ -1382,8 +1383,8 @@ async def save_weekly_winner():
                 Match.id == Prediction.match_id
             )
             .where(
-                Match.start_time >= start_of_week,
-                Match.start_time < end_of_week,
+                Match.start_time >= previous_week_start,
+                Match.start_time < previous_week_end,
                 Match.is_finished == True
             )
             .group_by(User.id)
@@ -1404,7 +1405,7 @@ async def save_weekly_winner():
         session.add(
             WeeklyWinner(
                 user_id=user.id,
-                week_start=start_of_week,
+                week_start=previous_week_start,
                 points=weekly_points
             )
         )
