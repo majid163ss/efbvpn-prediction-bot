@@ -716,28 +716,6 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
-@dp.callback_query(F.data == "admin_add_gallery")
-class GalleryImage(Base):
-    __tablename__ = "gallery_images"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
-
-    file_id: Mapped[str] = mapped_column(
-        String(255)
-    )
-
-    player_name: Mapped[str] = mapped_column(
-        String(100),
-        index=True
-    )
-
-    caption: Mapped[str | None] = mapped_column(
-        String(1000),
-        nullable=True
-    )
 @dp.callback_query(F.data == "admin_result")
 async def admin_result_callback(callback):
 
