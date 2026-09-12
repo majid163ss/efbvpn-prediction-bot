@@ -716,6 +716,25 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_add_gallery")
+async def admin_add_gallery_callback(callback):
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    pending_match[callback.from_user.id] = "admin_gallery_player"
+
+    await callback.message.answer(
+        "🎮 افزودن مکس eFootball\n\n"
+        "اسم بازیکن رو بفرست.\n\n"
+        "مثال:\n"
+        "Messi"
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_result")
 async def admin_result_callback(callback):
 
