@@ -1718,26 +1718,80 @@ async def gallery_player_name_handler(message: Message):
 
     user_id = message.from_user.id
 
-    if not is_admin(user_id):
-        return
+    pending = pending_match.get(user_id)
 
-    if pending_match.get(user_id) != "admin_gallery_player":
-        return
+    # افزودن مکس توسط ادمین
+    if is_admin(user_id) and pending == "admin_gallery_player":
 
-    player_name = message.text.strip()
+        player_name = message.text.strip()
 
-    if not player_name:
+        if not player_name:
+            await message.answer(
+                "❌ اسم بازیکن نمی‌تونه خالی باشه."
+            )
+            return
+
+        pending_match[user_id] = f"admin_gallery_player:{player_name}"
+
         await message.answer(
-            "❌ اسم بازیکن نمی‌تونه خالی باشه."
+            f"✅ بازیکن: {player_name}\n\n"
+            "حالا عکس مکس این بازیکن رو بفرست 📷"
         )
+
         return
 
-    pending_match[user_id] = f"admin_gallery_player:{player_name}"
+    # جستجوی مکس توسط کاربر
+    if pending == "gallery_search":
 
-    await message.answer(
-        f"✅ بازیکن: {player_name}\n\n"
-        "حالا عکس مکس این بازیکن رو بفرست 📷"
-    )
+        player_name = message.text.strip()
+
+        if not player_name:
+            await message.answer(
+                "❌ اسم بازیکن رو وارد کن."
+            )
+            return
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(GalleryImage).where(
+                    GalleryImage.player_name.ilike(
+                        f"%{player_name}%"
+                    )
+                ).order_by(
+                    GalleryImage.id.desc()
+                )
+            )
+
+            images = result.scalars().all()
+
+        pending_match.pop(user_id, None)
+
+        if not images:
+            await message.answer(
+                f"❌ مکی برای «{player_name}» پیدا نشد.",
+                reply_markup=main_menu()
+            )
+            return
+
+        await message.answer(
+            f"🎮 مکس‌های {player_name}\n\n"
+            f"📸 {len(images)} مکس پیدا شد:"
+        )
+
+        for image in images:
+
+            await message.answer_photo(
+                photo=image.file_id,
+                caption=image.caption
+            )
+
+        await message.answer(
+            "🔙 منوی اصلی",
+            reply_markup=main_menu()
+        )
+
+        return
 @dp.message(F.photo)
 @dp.message(F.photo)
 async def gallery_photo_handler(message: Message):
