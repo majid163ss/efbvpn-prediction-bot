@@ -902,6 +902,40 @@ async def admin_match_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data.startswith("lock_match:"))
+async def lock_match_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    match_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(Match.id == match_id)
+        )
+
+        match = result.scalar_one_or_none()
+
+        if not match:
+            await callback.answer(
+                "❌ بازی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        match.is_locked = True
+        await session.commit()
+
+    await callback.answer(
+        "🔒 بازی قفل شد.",
+        show_alert=True
+    )
 # =========================
 # CALLBACKS
 # =========================
