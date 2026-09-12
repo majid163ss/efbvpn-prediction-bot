@@ -1786,7 +1786,7 @@ async def gallery_player_name_handler(message: Message):
                 caption=image.caption
             )
 
-        keyboard = InlineKeyboardMarkup(
+                keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
