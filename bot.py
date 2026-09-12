@@ -977,6 +977,114 @@ async def unlock_match_callback(callback):
         "🔓 بازی باز شد.",
         show_alert=True
     )
+    # =========================
+# ADMIN - DELETE MATCH
+# =========================
+
+@dp.callback_query(F.data.startswith("delete_match:"))
+async def delete_match_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    match_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(Match.id == match_id)
+        )
+
+        match = result.scalar_one_or_none()
+
+        if not match:
+            await callback.answer(
+                "❌ بازی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        result = await session.execute(
+            select(Prediction).where(
+                Prediction.match_id == match_id
+            )
+        )
+
+        predictions = result.scalars().all()
+
+        for prediction in predictions:
+            session.delete(prediction)
+
+        session.delete(match)
+
+        await session.commit()
+
+    await callback.answer(
+        "🗑 بازی حذف شد.",
+        show_alert=True
+    )
+
+    await callback.message.edit_text(
+        "✅ بازی با موفقیت حذف شد.",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 مدیریت بازی‌ها",
+                        callback_data="admin_matches"
+                    )
+                ]
+            ]
+        )
+    )
+
+
+# =========================
+# ADMIN - RESULT
+# =========================
+
+@dp.callback_query(F.data.startswith("result_match:"))
+async def result_match_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    match_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(Match.id == match_id)
+        )
+
+        match = result.scalar_one_or_none()
+
+    if not match:
+        await callback.answer(
+            "❌ بازی پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    pending_match[callback.from_user.id] = f"admin_result:{match_id}"
+
+    await callback.message.answer(
+        f"🏁 ثبت نتیجه\n\n"
+        f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+        f"نتیجه نهایی رو به این شکل بفرست:\n\n"
+        f"مثال:\n"
+        f"2-1"
+    )
+
+    await callback.answer()
 # =========================
 # CALLBACKS
 # =========================
