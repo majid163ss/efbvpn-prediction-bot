@@ -1107,23 +1107,33 @@ async def result_match_callback(callback):
         )
         return
 
-    match_id = int(callback.data.split(":")[-1])
+    match_id = int(callback.data.split(":")[1])
 
     async with Session() as session:
-        match = await session.get(Match, match_id)
 
-    if match is None:
-        await callback.answer(
-            f"❌ بازی پیدا نشد.\nID: {match_id}",
-            show_alert=True
+        result = await session.execute(
+            select(Match).where(
+                Match.id == match_id
+            )
         )
-        return
+
+        match = result.scalar_one_or_none()
+
+        if not match:
+            await callback.answer(
+                f"❌ بازی پیدا نشد.\nID: {match_id}",
+                show_alert=True
+            )
+            return
+
+        home_team = match.home_team
+        away_team = match.away_team
 
     pending_match[callback.from_user.id] = f"admin_result:{match_id}"
 
     await callback.message.answer(
         f"🏁 ثبت نتیجه\n\n"
-        f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+        f"⚽ {home_team} 🆚 {away_team}\n\n"
         f"نتیجه نهایی رو بفرست:\n\n"
         f"مثال: 2-1"
     )
