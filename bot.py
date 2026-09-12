@@ -1349,7 +1349,7 @@ async def weekly_callback(callback):
     )
 
     await callback.answer()
-    @dp.callback_query(F.data == "mine")
+@dp.callback_query(F.data == "mine")
 async def mine_callback(callback):
 
     user_id = callback.from_user.id
