@@ -1449,8 +1449,10 @@ async def mine_callback(callback):
 
 @dp.callback_query(F.data == "profile")
 async def profile_callback(callback):
+
     async with Session() as session:
 
+        # پیدا کردن کاربر
         result = await session.execute(
             select(User).where(
                 User.telegram_id == callback.from_user.id
@@ -1466,63 +1468,99 @@ async def profile_callback(callback):
             )
             return
 
+        # رتبه کاربر بر اساس امتیاز کل
         rank_result = await session.execute(
-            select(User.telegram_id).where(
+            select(func.count(User.id)).where(
                 User.total_points > user.total_points
             )
         )
 
-        rank = len(rank_result.all()) + 1
+        rank = rank_result.scalar_one() + 1
 
+        # تمام پیش‌بینی‌های کاربر + اطلاعات بازی
         prediction_result = await session.execute(
-            select(Prediction).where(
+            select(
+                Prediction,
+                Match
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
                 Prediction.user_id == user.id
             )
         )
 
-        predictions = prediction_result.scalars().all()
+        rows = prediction_result.all()
 
-        total_predictions = len(predictions)
+        # فقط بازی‌هایی که نتیجه‌شان ثبت شده
+        finished_predictions = [
+            (prediction, match)
+            for prediction, match in rows
+            if match.is_finished
+        ]
 
+        total_predictions = len(rows)
+        finished_count = len(finished_predictions)
+
+        # پیش‌بینی موفق = حداقل 3 امتیاز
         correct_predictions = sum(
-            1 for p in predictions
-            if p.points >= 3
+            1
+            for prediction, match in finished_predictions
+            if prediction.points >= 3
         )
 
+        # نتیجه کاملاً دقیق
         exact_predictions = sum(
-            1 for p in predictions
-            if p.points == 5
+            1
+            for prediction, match in finished_predictions
+            if prediction.points == 5
         )
 
+        # درصد موفقیت فقط بر اساس بازی‌های تمام‌شده
         success_rate = (
-            round((correct_predictions / total_predictions) * 100)
-            if total_predictions > 0
+            round(
+                (correct_predictions / finished_count) * 100
+            )
+            if finished_count > 0
             else 0
+        )
+
+        name = (
+            user.first_name
+            or user.username
+            or "کاربر"
         )
 
         text = (
             "👤 پروفایل من\n\n"
-            f"👋 {user.first_name or 'کاربر'}\n\n"
-            f"🏆 رتبه: {rank}\n"
+            f"👋 {name}\n\n"
+            "━━━━━━━━━━━━━━\n\n"
+            f"🏆 رتبه کلی: {rank}\n"
             f"⭐ مجموع امتیاز: {user.total_points}\n\n"
             f"🎯 کل پیش‌بینی‌ها: {total_predictions}\n"
-            f"✅ پیش‌بینی‌های درست: {correct_predictions}\n"
+            f"🏁 بازی‌های تمام‌شده: {finished_count}\n"
+            f"✅ پیش‌بینی‌های موفق: {correct_predictions}\n"
             f"🎯 نتایج دقیق: {exact_predictions}\n"
-            f"📈 درصد موفقیت: {success_rate}%"
+            f"📈 درصد موفقیت: {success_rate}%\n\n"
+            "━━━━━━━━━━━━━━"
+        )
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 بازگشت",
+                        callback_data="home"
+                    )
+                ]
+            ]
         )
 
         await callback.message.edit_text(
             text,
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 بازگشت",
-                            callback_data="home"
-                        )
-                    ]
-                ]
-            )
+            reply_markup=keyboard
         )
 
     await callback.answer()
