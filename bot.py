@@ -665,6 +665,12 @@ async def admin_panel_callback(callback):
                 )
             ],
             [
+    InlineKeyboardButton(
+        text="🎮 افزودن مکس eFootball",
+        callback_data="admin_add_gallery"
+    )
+],
+            [
                 InlineKeyboardButton(
                     text="📋 مدیریت بازی‌ها",
                     callback_data="admin_matches"
