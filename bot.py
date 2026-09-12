@@ -188,6 +188,11 @@ class GalleryImage(Base):
         String(255)
     )
 
+    player_name: Mapped[str] = mapped_column(
+        String(100),
+        index=True
+    )
+
     caption: Mapped[str | None] = mapped_column(
         String(1000),
         nullable=True
