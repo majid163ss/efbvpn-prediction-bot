@@ -1121,7 +1121,9 @@ async def result_match_callback(callback):
 
         if not match:
             await callback.answer(
-                f"❌ بازی پیدا نشد.\nID: {match_id}",
+                f"❌ بازی پیدا نشد.\n"
+                f"ID: {match_id}\n"
+                f"تعداد بازی‌ها: 0",
                 show_alert=True
             )
             return
