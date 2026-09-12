@@ -312,13 +312,7 @@ def persistent_menu():
         resize_keyboard=True,
         is_persistent=True
     )
-@dp.message(F.text == "☰ منوی اصلی")
-async def persistent_menu_handler(message: Message):
 
-    await message.answer(
-        "🏠 منوی اصلی",
-        reply_markup=main_menu()
-    )
 
 # =========================
 # POINT SYSTEM
