@@ -1647,35 +1647,13 @@ async def rules_callback(callback):
 @dp.callback_query(F.data == "gallery")
 async def gallery_callback(callback):
 
-    async with Session() as session:
-
-        result = await session.execute(
-            select(GalleryImage)
-            .order_by(GalleryImage.id.desc())
-        )
-
-        images = result.scalars().all()
-
-    if not images:
-
-        await callback.answer(
-            "🎮 هنوز مکی اضافه نشده.",
-            show_alert=True
-        )
-        return
-
-    await callback.message.delete()
-
-    for image in images:
-
-        await callback.message.answer_photo(
-            photo=image.file_id,
-            caption=image.caption
-        )
+    pending_match[callback.from_user.id] = "gallery_search"
 
     await callback.message.answer(
-        "🎮 مکس‌های eFootball",
-        reply_markup=main_menu()
+        "🎮 جستجوی مکس eFootball\n\n"
+        "اسم بازیکن رو بفرست:\n\n"
+        "مثال:\n"
+        "Messi"
     )
 
     await callback.answer()
