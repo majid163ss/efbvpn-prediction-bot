@@ -17,6 +17,7 @@ from aiogram.types import (
 from aiogram.enums import ChatMemberStatus
 
 from sqlalchemy import (
+text,
     String,
     Integer,
     DateTime,
