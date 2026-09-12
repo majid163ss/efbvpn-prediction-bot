@@ -1754,7 +1754,37 @@ async def select_match(callback):
 
     await callback.answer()
 
+@dp.message(F.photo)
+async def gallery_photo_handler(message: Message):
 
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    if pending_match.get(user_id) != "admin_add_gallery":
+        return
+
+    photo = message.photo[-1]
+
+    caption = message.caption
+
+    async with Session() as session:
+
+        image = GalleryImage(
+            file_id=photo.file_id,
+            caption=caption
+        )
+
+        session.add(image)
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ مکس با موفقیت ذخیره شد! 🎮🔥\n\n"
+        "کاربران می‌تونن از بخش «🎮 مکس‌های eFootball» ببیننش."
+    )
 @dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
 async def prediction_handler(message: Message):
 
