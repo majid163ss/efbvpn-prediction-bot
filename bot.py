@@ -313,6 +313,14 @@ class EfootballContent(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ثبت سوپر ادمین‌ها در دیتابیس
+for admin_id in SUPER_ADMIN_IDS:
+    await conn.execute(
+        text(
+            "INSERT OR IGNORE INTO admins (telegram_id) VALUES (:telegram_id)"
+        ),
+        {"telegram_id": admin_id}
+    )
 
         try:
             await conn.execute(
