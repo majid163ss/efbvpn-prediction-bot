@@ -948,6 +948,7 @@ async def admin_panel_callback(callback):
     await callback.answer()
 @dp.callback_query(F.data == "admin_efootball")
 async def admin_efootball_callback(callback):
+    print("🔥 NEW EFOOTBALL ADMIN MENU")
 
     if not is_admin(callback.from_user.id):
         await callback.answer(
