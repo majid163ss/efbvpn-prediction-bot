@@ -75,7 +75,19 @@ Session = async_sessionmaker(
 class Base(DeclarativeBase):
     pass
 
+class Admin(Base):
+    __tablename__ = "admins"
 
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    telegram_id: Mapped[int] = mapped_column(
+        Integer,
+        unique=True,
+        index=True
+    )
 class User(Base):
     __tablename__ = "users"
 
