@@ -4383,7 +4383,6 @@ async def ef_edit_content_video_handler(message: Message):
 
 
 async def main():
-async def main():
 
     await init_db()
     await load_admins()
