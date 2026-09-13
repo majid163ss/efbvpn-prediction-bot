@@ -249,7 +249,7 @@ class EfootballSection(Base):
         Boolean,
         default=True
     )
-    class EfootballContent(Base):
+class EfootballContent(Base):
     __tablename__ = "efootball_contents"
 
     id: Mapped[int] = mapped_column(
