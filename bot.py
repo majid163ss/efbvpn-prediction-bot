@@ -336,15 +336,15 @@ async def init_db():
             )
         except Exception:
             pass
-            try:
-    await conn.execute(
-        text(
+    try:
+        await conn.execute(
+            text(
             "ALTER TABLE matches "
             "ADD COLUMN is_published BOOLEAN DEFAULT 0"
         )
     )
-except Exception:
-    pass
+   except Exception:
+       pass
 
 
 async def get_user(
