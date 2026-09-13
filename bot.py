@@ -377,11 +377,11 @@ def main_menu():
                 )
             ],
             [
-                InlineKeyboardButton(
-                    text="🎮 مکس‌های eFootball",
-                    callback_data="gallery"
-                )
-            ],
+    InlineKeyboardButton(
+        text="🎮 ای فوتبال",
+        callback_data="efootball"
+    )
+],
             [
                 InlineKeyboardButton(
                     text="📜 قوانین",
