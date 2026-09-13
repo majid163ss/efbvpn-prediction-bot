@@ -370,44 +370,14 @@ def main_menu():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🎯 پیش‌بینی بازی‌ها",
-                    callback_data="matches"
+                    text="🎯 پیش‌بینی نتایج",
+                    callback_data="prediction_menu"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🏆 جدول امتیازات",
-                    callback_data="leaderboard"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🏆 لیگ این هفته",
-                    callback_data="weekly"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📊 پیش‌بینی‌های من",
-                    callback_data="mine"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="👤 پروفایل من",
-                    callback_data="profile"
-                )
-            ],
-            [
-    InlineKeyboardButton(
-        text="🎮 ای فوتبال",
-        callback_data="efootball"
-    )
-],
-            [
-                InlineKeyboardButton(
-                    text="📜 قوانین",
-                    callback_data="rules"
+                    text="🎮 ای فوتبال",
+                    callback_data="efootball"
                 )
             ],
             [
@@ -417,21 +387,6 @@ def main_menu():
                 )
             ]
         ]
-    )
-
-
-def persistent_menu():
-
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(
-                    text="☰ منوی اصلی"
-                )
-            ]
-        ],
-        resize_keyboard=True,
-        is_persistent=True
     )
 
 
