@@ -903,6 +903,26 @@ async def admin_efootball_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "ef_add_section")
+async def ef_add_section_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    pending_match[callback.from_user.id] = "ef_add_section"
+
+    await callback.message.answer(
+        "➕ افزودن بخش eFootball\n\n"
+        "اسم بخش رو بفرست.\n\n"
+        "مثال:\n"
+        "🧠 سبک‌های بازی"
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_add_gallery")
 async def admin_add_gallery_callback(callback):
     if not is_admin(callback.from_user.id):
