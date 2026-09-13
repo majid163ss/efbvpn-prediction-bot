@@ -343,7 +343,7 @@ async def init_db():
             "ADD COLUMN is_published BOOLEAN DEFAULT 0"
         )
     )
-   except Exception:
+    except Exception:
        pass
 
 
