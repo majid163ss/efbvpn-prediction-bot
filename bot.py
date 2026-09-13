@@ -2830,12 +2830,15 @@ async def select_match(callback):
 
         pending_match[callback.from_user.id] = match.id
 
-        await callback.message.answer(
-            f"🎯 پیش‌بینی بازی:\n\n"
-            f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
-            f"نتیجه رو به این شکل بفرست:\n"
-            f"مثلاً:\n"
-            f"2-1"
+        await bot.send_message(
+    chat_id=callback.from_user.id,
+    text=(
+        f"🎯 پیش‌بینی بازی:\n\n"
+        f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+        f"نتیجه رو به این شکل بفرست:\n"
+        f"مثلاً:\n"
+        f"2-1"
+    )
         )
 
     await callback.answer()
