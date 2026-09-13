@@ -1039,6 +1039,265 @@ async def ef_manage_sections_callback(callback):
     )
 
     await callback.answer()
+    # =========================
+# لیست بخش‌های eFootball
+# =========================
+
+@dp.callback_query(F.data == "ef_list_sections")
+async def ef_list_sections_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection)
+            .order_by(EfootballSection.sort_order.asc())
+        )
+
+        sections = result.scalars().all()
+
+    if not sections:
+        text = "📭 هنوز هیچ بخشی ساخته نشده."
+    else:
+        text = "📋 لیست بخش‌های eFootball\n\n"
+
+        for i, section in enumerate(sections, 1):
+            text += (
+                f"{i}. {section.title}\n"
+                f"🆔 ID: {section.id}\n\n"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="ef_manage_sections"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================
+# انتخاب بخش برای ویرایش
+# =========================
+
+@dp.callback_query(F.data == "ef_edit_section")
+async def ef_edit_section_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection)
+            .order_by(EfootballSection.sort_order.asc())
+        )
+
+        sections = result.scalars().all()
+
+    if not sections:
+        await callback.answer(
+            "📭 هنوز هیچ بخشی وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for section in sections:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"✏️ {section.title}",
+                callback_data=f"ef_edit_select:{section.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="ef_manage_sections"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "✏️ بخشی که می‌خوای ویرایش کنی رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================
+# انتخاب بخش برای حذف
+# =========================
+
+@dp.callback_query(F.data == "ef_delete_section")
+async def ef_delete_section_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection)
+            .order_by(EfootballSection.sort_order.asc())
+        )
+
+        sections = result.scalars().all()
+
+    if not sections:
+        await callback.answer(
+            "📭 هنوز هیچ بخشی وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for section in sections:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"🗑️ {section.title}",
+                callback_data=f"ef_delete_select:{section.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="ef_manage_sections"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "🗑️ بخشی که می‌خوای حذف کنی رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================
+# انتخاب بخش برای ویرایش
+# =========================
+
+@dp.callback_query(F.data.startswith("ef_edit_select:"))
+async def ef_edit_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    section_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection).where(
+                EfootballSection.id == section_id
+            )
+        )
+
+        section = result.scalar_one_or_none()
+
+    if not section:
+        await callback.answer(
+            "❌ بخش پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+
+    pending_match[user_id] = "ef_edit_section"
+    pending_match[f"{user_id}_edit_section"] = section_id
+
+    await callback.message.answer(
+        f"✏️ ویرایش بخش\n\n"
+        f"بخش فعلی: {section.title}\n\n"
+        f"اسم جدید بخش رو بفرست:"
+    )
+
+    await callback.answer()
+
+
+# =========================
+# انتخاب بخش برای حذف
+# =========================
+
+@dp.callback_query(F.data.startswith("ef_delete_select:"))
+async def ef_delete_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    section_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection).where(
+                EfootballSection.id == section_id
+            )
+        )
+
+        section = result.scalar_one_or_none()
+
+    if not section:
+        await callback.answer(
+            "❌ بخش پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+
+    pending_match[user_id] = "ef_delete_section"
+    pending_match[f"{user_id}_delete_section"] = section_id
+
+    await callback.message.answer(
+        f"🗑️ حذف بخش\n\n"
+        f"بخش انتخاب‌شده: {section.title}\n\n"
+        f"برای حذف، کلمه «حذف» را بفرست."
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "ef_add_section")
 async def ef_add_section_callback(callback):
 
