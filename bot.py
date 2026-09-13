@@ -4369,7 +4369,7 @@ async def ef_edit_content_video_handler(message: Message):
         "✅ ویدیو و کپشن با موفقیت ویرایش شد! 🎬🔥"
     )
     async def load_admins():
-    ADMIN_IDS.clear()
+        ADMIN_IDS.clear()
 
     async with Session() as session:
         result = await session.execute(
