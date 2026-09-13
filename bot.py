@@ -227,6 +227,28 @@ class GalleryImage(Base):
         String(1000),
         nullable=True
     )
+class EfootballSection(Base):
+    __tablename__ = "efootball_sections"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
+
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
     
 
 
