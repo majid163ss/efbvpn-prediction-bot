@@ -988,6 +988,305 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+    # =========================
+# ADMIN MANAGEMENT
+# =========================
+
+pending_admin_action = {}
+
+
+def admin_management_menu():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن ادمین",
+                    callback_data="admin_add"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ حذف ادمین",
+                    callback_data="admin_delete"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 لیست ادمین‌ها",
+                    callback_data="admin_list"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+
+@dp.callback_query(F.data == "admin_manage")
+async def admin_manage_callback(callback):
+
+    if not is_super_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ فقط سوپرادمین‌ها دسترسی دارند.",
+            show_alert=True
+        )
+        return
+
+    await callback.message.edit_text(
+        "👑 مدیریت ادمین‌ها\n\n"
+        "یکی از گزینه‌ها را انتخاب کن:",
+        reply_markup=admin_management_menu()
+    )
+
+    await callback.answer()
+
+
+# =========================
+# ADD ADMIN
+# =========================
+
+@dp.callback_query(F.data == "admin_add")
+async def admin_add_callback(callback):
+
+    if not is_super_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ فقط سوپرادمین‌ها دسترسی دارند.",
+            show_alert=True
+        )
+        return
+
+    pending_admin_action[callback.from_user.id] = "add"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="❌ لغو",
+                    callback_data="admin_manage"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "➕ افزودن ادمین\n\n"
+        "آیدی عددی تلگرام شخص را ارسال کن.\n\n"
+        "مثال:\n"
+        "123456789",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================
+# DELETE ADMIN
+# =========================
+
+@dp.callback_query(F.data == "admin_delete")
+async def admin_delete_callback(callback):
+
+    if not is_super_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ فقط سوپرادمین‌ها دسترسی دارند.",
+            show_alert=True
+        )
+        return
+
+    pending_admin_action[callback.from_user.id] = "delete"
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="❌ لغو",
+                    callback_data="admin_manage"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "❌ حذف ادمین\n\n"
+        "آیدی عددی ادمینی که می‌خواهی حذف شود را ارسال کن.\n\n"
+        "⚠️ سوپرادمین‌ها قابل حذف نیستند.",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================
+# ADMIN LIST
+# =========================
+
+@dp.callback_query(F.data == "admin_list")
+async def admin_list_callback(callback):
+
+    if not is_super_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ فقط سوپرادمین‌ها دسترسی دارند.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Admin).order_by(Admin.id)
+        )
+
+        admins = result.scalars().all()
+
+    if not admins:
+        text_message = "📋 هیچ ادمینی ثبت نشده است."
+    else:
+        lines = ["📋 لیست ادمین‌ها\n"]
+
+        for number, admin in enumerate(admins, start=1):
+
+            if admin.telegram_id in SUPER_ADMIN_IDS:
+                role = "👑 سوپرادمین"
+            else:
+                role = "🛡 ادمین"
+
+            lines.append(
+                f"{number}. `{admin.telegram_id}` — {role}"
+            )
+
+        text_message = "\n".join(lines)
+
+    await callback.message.edit_text(
+        text_message,
+        parse_mode="Markdown",
+        reply_markup=admin_management_menu()
+    )
+
+    await callback.answer()
+
+
+# =========================
+# RECEIVE ADMIN ID
+# =========================
+
+@dp.message(F.text.regexp(r"^\d+$"))
+async def admin_id_input_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_super_admin(user_id):
+        return
+
+    action = pending_admin_action.get(user_id)
+
+    if not action:
+        return
+
+    try:
+        target_id = int(message.text.strip())
+    except ValueError:
+        await message.answer(
+            "❌ آیدی وارد شده معتبر نیست."
+        )
+        return
+
+    # =========================
+    # ADD
+    # =========================
+
+    if action == "add":
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(Admin).where(
+                    Admin.telegram_id == target_id
+                )
+            )
+
+            existing_admin = result.scalar_one_or_none()
+
+            if existing_admin:
+                pending_admin_action.pop(user_id, None)
+
+                await message.answer(
+                    "⚠️ این شخص از قبل ادمین است."
+                )
+                return
+
+            new_admin = Admin(
+                telegram_id=target_id
+            )
+
+            session.add(new_admin)
+            await session.commit()
+
+        ADMIN_IDS.add(target_id)
+
+        pending_admin_action.pop(user_id, None)
+
+        await message.answer(
+            "✅ ادمین با موفقیت اضافه شد.\n\n"
+            f"🆔 `{target_id}`",
+            parse_mode="Markdown",
+            reply_markup=admin_management_menu()
+        )
+
+        return
+
+    # =========================
+    # DELETE
+    # =========================
+
+    if action == "delete":
+
+        if target_id in SUPER_ADMIN_IDS:
+
+            pending_admin_action.pop(user_id, None)
+
+            await message.answer(
+                "⛔ سوپرادمین قابل حذف نیست."
+            )
+            return
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(Admin).where(
+                    Admin.telegram_id == target_id
+                )
+            )
+
+            admin = result.scalar_one_or_none()
+
+            if not admin:
+
+                pending_admin_action.pop(user_id, None)
+
+                await message.answer(
+                    "⚠️ این آیدی در لیست ادمین‌ها وجود ندارد."
+                )
+                return
+
+            await session.delete(admin)
+            await session.commit()
+
+        ADMIN_IDS.discard(target_id)
+
+        pending_admin_action.pop(user_id, None)
+
+        await message.answer(
+            "✅ ادمین با موفقیت حذف شد.\n\n"
+            f"🆔 `{target_id}`",
+            parse_mode="Markdown",
+            reply_markup=admin_management_menu()
+        )
+
+        return
 @dp.callback_query(F.data == "admin_efootball")
 async def admin_efootball_callback(callback):
     print("🔥 NEW EFOOTBALL ADMIN MENU")
