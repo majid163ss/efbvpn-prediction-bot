@@ -2151,6 +2151,57 @@ async def check_membership_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "prediction_menu")
+async def prediction_menu_callback(callback):
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⚽️ پیش‌بینی بازی‌ها",
+                    callback_data="matches"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📊 پیش‌بینی‌های من",
+                    callback_data="mine"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏆 جدول امتیازات",
+                    callback_data="leaderboard"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏆 لیگ این هفته",
+                    callback_data="weekly"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👤 پروفایل من",
+                    callback_data="profile"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "🎯 پیش‌بینی نتایج\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "matches")
 async def matches_callback(callback):
 
