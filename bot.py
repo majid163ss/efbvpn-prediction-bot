@@ -4369,7 +4369,7 @@ async def ef_edit_content_video_handler(message: Message):
         "✅ ویدیو و کپشن با موفقیت ویرایش شد! 🎬🔥"
     )
     async def load_admins():
-        ADMIN_IDS.clear()
+    ADMIN_IDS.clear()
 
     async with Session() as session:
         result = await session.execute(
@@ -4383,11 +4383,11 @@ async def ef_edit_content_video_handler(message: Message):
 
 
 async def main():
-
     await init_db()
     await load_admins()
+
     asyncio.create_task(
-    auto_lock_matches()
+        auto_lock_matches()
     )
 
     print("Bot is running...")
@@ -4398,5 +4398,4 @@ async def main():
 
 
 if __name__ == "__main__":
-
     asyncio.run(main())
