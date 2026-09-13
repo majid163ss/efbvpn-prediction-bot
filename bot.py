@@ -249,6 +249,48 @@ class EfootballSection(Base):
         Boolean,
         default=True
     )
+    class EfootballContent(Base):
+    __tablename__ = "efootball_contents"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    section_id: Mapped[int] = mapped_column(
+        ForeignKey("efootball_sections.id"),
+        index=True
+    )
+
+    content_type: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False
+    )
+
+    title: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True
+    )
+
+    content: Mapped[str | None] = mapped_column(
+        String(5000),
+        nullable=True
+    )
+
+    file_id: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True
+    )
+
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
     
 
 
