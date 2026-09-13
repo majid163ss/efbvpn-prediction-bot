@@ -157,6 +157,10 @@ class Match(Base):
         Boolean,
         default=False
     )
+    is_published: Mapped[bool] = mapped_column(
+    Boolean,
+    default=False
+    )
 
 
 class Prediction(Base):
