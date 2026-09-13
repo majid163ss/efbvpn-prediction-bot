@@ -3085,6 +3085,948 @@ async def auto_lock_matches():
                 await session.commit()
 
         await asyncio.sleep(30)
+        # =========================================================
+# مدیریت کامل محتوای eFootball
+# =========================================================
+
+@dp.callback_query(F.data == "ef_manage_content")
+async def ef_manage_content_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن محتوا",
+                    callback_data="ef_content_add"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✏️ ویرایش محتوا",
+                    callback_data="ef_content_edit"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ حذف محتوا",
+                    callback_data="ef_content_delete"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 لیست محتوا",
+                    callback_data="ef_content_list"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_efootball"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "📄 مدیریت محتوای eFootball\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب بخش برای افزودن محتوا
+# =========================================================
+
+@dp.callback_query(F.data == "ef_content_add")
+async def ef_content_add_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection)
+            .where(EfootballSection.is_active == True)
+            .order_by(EfootballSection.sort_order.asc())
+        )
+
+        sections = result.scalars().all()
+
+    if not sections:
+        await callback.answer(
+            "📭 اول حداقل یک بخش بساز.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for section in sections:
+
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"📂 {section.title}",
+                callback_data=f"ef_content_add_section:{section.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="ef_manage_content"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "📂 محتوا رو در کدوم بخش می‌خوای اضافه کنی؟",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب نوع محتوا
+# =========================================================
+
+@dp.callback_query(F.data.startswith("ef_content_add_section:"))
+async def ef_content_add_section_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    section_id = int(callback.data.split(":")[1])
+
+    pending_match[callback.from_user.id] = (
+        f"ef_content_type:{section_id}"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📝 متن",
+                    callback_data=f"ef_content_type:text:{section_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🖼️ عکس",
+                    callback_data=f"ef_content_type:photo:{section_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎬 ویدیو",
+                    callback_data=f"ef_content_type:video:{section_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="ef_content_add"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "📄 نوع محتوا رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب نوع و شروع دریافت محتوا
+# =========================================================
+
+@dp.callback_query(F.data.startswith("ef_content_type:"))
+async def ef_content_type_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    parts = callback.data.split(":")
+
+    content_type = parts[1]
+    section_id = int(parts[2])
+
+    user_id = callback.from_user.id
+
+    pending_match[user_id] = (
+        f"ef_add_content:{content_type}:{section_id}"
+    )
+
+    if content_type == "text":
+
+        await callback.message.answer(
+            "📝 محتوای متنی رو بفرست.\n\n"
+            "مثال:\n"
+            "بهترین تنظیمات بازی..."
+        )
+
+    elif content_type == "photo":
+
+        await callback.message.answer(
+            "🖼️ عکس رو بفرست.\n\n"
+            "می‌تونی کپشن هم براش بنویسی."
+        )
+
+    elif content_type == "video":
+
+        await callback.message.answer(
+            "🎬 ویدیو رو بفرست.\n\n"
+            "می‌تونی کپشن هم براش بنویسی."
+        )
+
+    await callback.answer()
+
+
+# =========================================================
+# دریافت متن محتوا
+# =========================================================
+
+@dp.message(
+    F.text,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_add_content:text:")
+)
+async def ef_add_text_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    section_id = int(
+        pending.split(":")[2]
+    )
+
+    content_text = message.text.strip()
+
+    if not content_text:
+        await message.answer(
+            "❌ متن نمی‌تونه خالی باشه."
+        )
+        return
+
+    async with Session() as session:
+
+        item = EfootballContent(
+            section_id=section_id,
+            content_type="text",
+            title=None,
+            content=content_text,
+            file_id=None,
+            sort_order=0,
+            is_active=True
+        )
+
+        session.add(item)
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ محتوای متنی با موفقیت اضافه شد! 🎮🔥"
+    )
+
+
+# =========================================================
+# دریافت عکس محتوا
+# =========================================================
+
+@dp.message(
+    F.photo,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_add_content:photo:")
+)
+async def ef_add_photo_content_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    section_id = int(
+        pending.split(":")[2]
+    )
+
+    photo = message.photo[-1]
+
+    async with Session() as session:
+
+        item = EfootballContent(
+            section_id=section_id,
+            content_type="photo",
+            title=None,
+            content=message.caption,
+            file_id=photo.file_id,
+            sort_order=0,
+            is_active=True
+        )
+
+        session.add(item)
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ عکس با موفقیت به بخش eFootball اضافه شد! 🖼️🔥"
+    )
+
+
+# =========================================================
+# دریافت ویدیو محتوا
+# =========================================================
+
+@dp.message(
+    F.video,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_add_content:video:")
+)
+async def ef_add_video_content_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    section_id = int(
+        pending.split(":")[2]
+    )
+
+    video = message.video
+
+    async with Session() as session:
+
+        item = EfootballContent(
+            section_id=section_id,
+            content_type="video",
+            title=None,
+            content=message.caption,
+            file_id=video.file_id,
+            sort_order=0,
+            is_active=True
+        )
+
+        session.add(item)
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ ویدیو با موفقیت به بخش eFootball اضافه شد! 🎬🔥"
+    )
+
+
+# =========================================================
+# لیست محتوا
+# =========================================================
+
+@dp.callback_query(F.data == "ef_content_list")
+async def ef_content_list_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                EfootballContent,
+                EfootballSection
+            )
+            .join(
+                EfootballSection,
+                EfootballContent.section_id
+                == EfootballSection.id
+            )
+            .order_by(
+                EfootballSection.sort_order.asc(),
+                EfootballContent.id.asc()
+            )
+        )
+
+        rows = result.all()
+
+    if not rows:
+
+        await callback.message.edit_text(
+            "📭 هنوز هیچ محتوایی اضافه نشده.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="ef_manage_content"
+                        )
+                    ]
+                ]
+            )
+        )
+
+        await callback.answer()
+        return
+
+    text = "📋 لیست محتوای eFootball\n\n"
+
+    for i, (item, section) in enumerate(rows, 1):
+
+        if item.content_type == "text":
+            icon = "📝"
+        elif item.content_type == "photo":
+            icon = "🖼️"
+        else:
+            icon = "🎬"
+
+        preview = item.content or ""
+
+        if len(preview) > 80:
+            preview = preview[:80] + "..."
+
+        text += (
+            f"{i}. {icon} {section.title}\n"
+            f"🆔 محتوا: {item.id}\n"
+            f"📄 نوع: {item.content_type}\n"
+            f"📝 {preview}\n\n"
+        )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="ef_manage_content"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب محتوا برای حذف
+# =========================================================
+
+@dp.callback_query(F.data == "ef_content_delete")
+async def ef_content_delete_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                EfootballContent,
+                EfootballSection
+            )
+            .join(
+                EfootballSection,
+                EfootballContent.section_id
+                == EfootballSection.id
+            )
+            .order_by(EfootballContent.id.asc())
+        )
+
+        rows = result.all()
+
+    if not rows:
+
+        await callback.answer(
+            "📭 هنوز محتوایی وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for item, section in rows:
+
+        if item.content_type == "text":
+            icon = "📝"
+        elif item.content_type == "photo":
+            icon = "🖼️"
+        else:
+            icon = "🎬"
+
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"{icon} {section.title} | #{item.id}",
+                callback_data=f"ef_content_delete_select:{item.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="ef_manage_content"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "🗑️ محتوایی که می‌خوای حذف کنی رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# حذف محتوا
+# =========================================================
+
+@dp.callback_query(F.data.startswith("ef_content_delete_select:"))
+async def ef_content_delete_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    content_id = int(
+        callback.data.split(":")[1]
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballContent).where(
+                EfootballContent.id == content_id
+            )
+        )
+
+        item = result.scalar_one_or_none()
+
+        if not item:
+
+            await callback.answer(
+                "❌ محتوا پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        await session.delete(item)
+        await session.commit()
+
+    await callback.message.edit_text(
+        "🗑️ محتوا با موفقیت حذف شد.",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 مدیریت محتوا",
+                        callback_data="ef_manage_content"
+                    )
+                ]
+            ]
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب محتوا برای ویرایش
+# =========================================================
+
+@dp.callback_query(F.data == "ef_content_edit")
+async def ef_content_edit_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                EfootballContent,
+                EfootballSection
+            )
+            .join(
+                EfootballSection,
+                EfootballContent.section_id
+                == EfootballSection.id
+            )
+            .order_by(EfootballContent.id.asc())
+        )
+
+        rows = result.all()
+
+    if not rows:
+
+        await callback.answer(
+            "📭 هنوز محتوایی وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for item, section in rows:
+
+        if item.content_type == "text":
+            icon = "📝"
+        elif item.content_type == "photo":
+            icon = "🖼️"
+        else:
+            icon = "🎬"
+
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"{icon} {section.title} | #{item.id}",
+                callback_data=f"ef_content_edit_select:{item.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="ef_manage_content"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "✏️ محتوایی که می‌خوای ویرایش کنی رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# انتخاب نوع ویرایش
+# =========================================================
+
+@dp.callback_query(F.data.startswith("ef_content_edit_select:"))
+async def ef_content_edit_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    content_id = int(
+        callback.data.split(":")[1]
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballContent).where(
+                EfootballContent.id == content_id
+            )
+        )
+
+        item = result.scalar_one_or_none()
+
+    if not item:
+
+        await callback.answer(
+            "❌ محتوا پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+
+    pending_match[user_id] = (
+        f"ef_edit_content:{content_id}"
+    )
+
+    if item.content_type == "text":
+
+        await callback.message.answer(
+            "✏️ متن جدید این محتوا رو بفرست:"
+        )
+
+    else:
+
+        await callback.message.answer(
+            "✏️ برای این محتوا یک فایل جدید بفرست:\n\n"
+            "🖼️ برای عکس: عکس بفرست\n"
+            "🎬 برای ویدیو: ویدیو بفرست\n\n"
+            "اگر کپشن هم می‌خوای تغییر کنه، همراه فایل کپشن بفرست."
+        )
+
+    await callback.answer()
+
+
+# =========================================================
+# ویرایش متن
+# =========================================================
+
+@dp.message(
+    F.text,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_edit_content:")
+)
+async def ef_edit_content_text_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    content_id = int(
+        pending.split(":")[1]
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballContent).where(
+                EfootballContent.id == content_id
+            )
+        )
+
+        item = result.scalar_one_or_none()
+
+        if not item:
+            pending_match.pop(user_id, None)
+
+            await message.answer(
+                "❌ محتوا پیدا نشد."
+            )
+            return
+
+        if item.content_type != "text":
+            await message.answer(
+                "❌ این محتوا متنی نیست. فایل مناسبش رو بفرست."
+            )
+            return
+
+        item.content = message.text.strip()
+
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ متن با موفقیت ویرایش شد! ✏️🔥"
+    )
+
+
+# =========================================================
+# ویرایش عکس
+# =========================================================
+
+@dp.message(
+    F.photo,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_edit_content:")
+)
+async def ef_edit_content_photo_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    content_id = int(
+        pending.split(":")[1]
+    )
+
+    photo = message.photo[-1]
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballContent).where(
+                EfootballContent.id == content_id
+            )
+        )
+
+        item = result.scalar_one_or_none()
+
+        if not item:
+            pending_match.pop(user_id, None)
+
+            await message.answer(
+                "❌ محتوا پیدا نشد."
+            )
+            return
+
+        if item.content_type != "photo":
+            await message.answer(
+                "❌ این محتوا عکس نیست."
+            )
+            return
+
+        item.file_id = photo.file_id
+
+        if message.caption is not None:
+            item.content = message.caption
+
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ عکس و کپشن با موفقیت ویرایش شد! 🖼️🔥"
+    )
+
+
+# =========================================================
+# ویرایش ویدیو
+# =========================================================
+
+@dp.message(
+    F.video,
+    lambda message:
+        isinstance(
+            pending_match.get(message.from_user.id),
+            str
+        )
+        and pending_match.get(
+            message.from_user.id
+        ).startswith("ef_edit_content:")
+)
+async def ef_edit_content_video_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_match.get(user_id)
+
+    content_id = int(
+        pending.split(":")[1]
+    )
+
+    video = message.video
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballContent).where(
+                EfootballContent.id == content_id
+            )
+        )
+
+        item = result.scalar_one_or_none()
+
+        if not item:
+            pending_match.pop(user_id, None)
+
+            await message.answer(
+                "❌ محتوا پیدا نشد."
+            )
+            return
+
+        if item.content_type != "video":
+            await message.answer(
+                "❌ این محتوا ویدیو نیست."
+            )
+            return
+
+        item.file_id = video.file_id
+
+        if message.caption is not None:
+            item.content = message.caption
+
+        await session.commit()
+
+    pending_match.pop(user_id, None)
+
+    await message.answer(
+        "✅ ویدیو و کپشن با موفقیت ویرایش شد! 🎬🔥"
+    )
 async def main():
 
     await init_db()
