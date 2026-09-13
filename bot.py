@@ -960,26 +960,14 @@ async def admin_efootball_callback(callback):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="➕ افزودن بخش",
-                    callback_data="ef_add_section"
+                    text="📂 مدیریت بخش‌ها",
+                    callback_data="ef_manage_sections"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="✏️ ویرایش بخش",
-                    callback_data="ef_edit_section"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🗑️ حذف بخش",
-                    callback_data="ef_delete_section"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📋 لیست بخش‌ها",
-                    callback_data="ef_list_sections"
+                    text="📄 مدیریت محتوا",
+                    callback_data="ef_manage_content"
                 )
             ],
             [
