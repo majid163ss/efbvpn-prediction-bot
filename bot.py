@@ -669,6 +669,50 @@ bot = Bot(
 )
 
 dp = Dispatcher()
+@dp.callback_query(F.data.startswith("ef_section:"))
+async def ef_section_callback(callback):
+
+    section_id = int(callback.data.split(":")[1])
+
+    async with Session() as session:
+        result = await session.execute(
+            select(EfootballContent)
+            .where(
+                EfootballContent.section_id == section_id,
+                EfootballContent.is_active == True
+            )
+            .order_by(EfootballContent.sort_order.asc())
+        )
+
+        contents = result.scalars().all()
+
+    if not contents:
+        await callback.answer(
+            "📭 این بخش هنوز محتوایی نداره.",
+            show_alert=True
+        )
+        return
+
+    for item in contents:
+
+        if item.content_type == "text":
+            await callback.message.answer(
+                item.content or ""
+            )
+
+        elif item.content_type == "photo" and item.file_id:
+            await callback.message.answer_photo(
+                photo=item.file_id,
+                caption=item.content or ""
+            )
+
+        elif item.content_type == "video" and item.file_id:
+            await callback.message.answer_video(
+                video=item.file_id,
+                caption=item.content or ""
+            )
+
+    await callback.answer()
 @dp.callback_query(F.data == "efootball")
 async def efootball_callback(callback):
 
