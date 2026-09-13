@@ -899,6 +899,12 @@ async def admin_panel_callback(callback):
             )
         ],
         [
+    InlineKeyboardButton(
+        text="📢 انتشار بازی‌ها در کانال",
+        callback_data="admin_publish_matches"
+    )
+],
+        [
             InlineKeyboardButton(
                 text="🎮 افزودن مکس eFootball",
                 callback_data="admin_add_gallery"
