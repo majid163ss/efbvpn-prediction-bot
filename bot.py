@@ -2037,6 +2037,53 @@ async def gallery_player_name_handler(message: Message):
             )
 
             session.add(section)
+@dp.message(
+    F.text,
+    lambda message: pending_match.get(message.from_user.id) in (
+        "admin_gallery_player",
+        "gallery_search",
+        "ef_add_section"
+    )
+)
+async def gallery_player_name_handler(message: Message):
+
+    user_id = message.from_user.id
+    pending = pending_match.get(user_id)
+
+    # افزودن بخش eFootball
+    if is_admin(user_id) and pending == "ef_add_section":
+
+        title = message.text.strip()
+
+        if not title:
+            await message.answer(
+                "❌ اسم بخش نمی‌تونه خالی باشه."
+            )
+            return
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(EfootballSection).order_by(
+                    EfootballSection.sort_order.desc()
+                )
+            )
+
+            last_section = result.scalars().first()
+
+            next_order = (
+                last_section.sort_order + 1
+                if last_section
+                else 1
+            )
+
+            section = EfootballSection(
+                title=title,
+                sort_order=next_order,
+                is_active=True
+            )
+
+            session.add(section)
 
             await session.commit()
 
