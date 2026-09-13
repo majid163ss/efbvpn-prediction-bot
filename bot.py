@@ -851,6 +851,58 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_efootball")
+async def admin_efootball_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن بخش",
+                    callback_data="ef_add_section"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✏️ ویرایش بخش",
+                    callback_data="ef_edit_section"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ حذف بخش",
+                    callback_data="ef_delete_section"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 لیست بخش‌ها",
+                    callback_data="ef_list_sections"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "🎮 مدیریت eFootball\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_add_gallery")
 async def admin_add_gallery_callback(callback):
     if not is_admin(callback.from_user.id):
