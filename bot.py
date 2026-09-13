@@ -799,7 +799,6 @@ async def is_member(bot, user_id, chat_username):
 # =========================
 
 @dp.message(Command("start"))
-@dp.message(Command("start"))
 async def start_handler(message: Message):
 
     channel_member = await is_member(
@@ -849,6 +848,73 @@ async def start_handler(message: Message):
 
         return
 
+    # بررسی لینک مستقیم یک بازی
+    start_param = None
+
+    if message.text:
+        parts = message.text.split(maxsplit=1)
+
+        if len(parts) == 2:
+            start_param = parts[1].strip()
+
+    if start_param and start_param.startswith("match_"):
+
+        try:
+            match_id = int(
+                start_param.replace("match_", "", 1)
+            )
+        except ValueError:
+            match_id = None
+
+        if match_id is not None:
+
+            async with Session() as session:
+
+                result = await session.execute(
+                    select(Match).where(
+                        Match.id == match_id
+                    )
+                )
+
+                match = result.scalar_one_or_none()
+
+            if not match:
+
+                await message.answer(
+                    "❌ این بازی پیدا نشد."
+                )
+                return
+
+            locked = (
+                match.is_locked
+                or match.is_finished
+                or datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None) >= match.start_time
+            )
+
+            if locked:
+
+                await message.answer(
+                    "🔒 زمان پیش‌بینی این بازی تمام شده."
+                )
+                return
+
+            pending_match[
+                message.from_user.id
+            ] = match.id
+
+            await message.answer(
+                f"🎯 پیش‌بینی بازی:\n\n"
+                f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+                f"نتیجه رو به این شکل بفرست:\n"
+                f"مثلاً:\n"
+                f"2-1"
+            )
+
+            return
+
+    # ورود معمولی به ربات
     async with Session() as session:
 
         await get_user(
@@ -856,7 +922,7 @@ async def start_handler(message: Message):
             message
         )
 
-        await message.answer(
+    await message.answer(
         "⚽ به ربات پیش‌بینی فوتبال خوش اومدی!\n\n"
         "بازی‌ها رو انتخاب کن و نتیجه رو پیش‌بینی کن 🎯",
         reply_markup=main_menu()
@@ -866,10 +932,6 @@ async def start_handler(message: Message):
         "☰ برای باز کردن منوی اصلی، از دکمه پایین استفاده کن.",
         reply_markup=persistent_menu()
     )
-@dp.message(Command("matches"))
-async def matches_command(message: Message):
-
-    await show_matches(message)
 
 
 # =========================
