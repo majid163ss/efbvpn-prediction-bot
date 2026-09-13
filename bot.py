@@ -669,6 +669,56 @@ bot = Bot(
 )
 
 dp = Dispatcher()
+@dp.callback_query(F.data == "efootball")
+async def efootball_callback(callback):
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(EfootballSection)
+            .where(
+                EfootballSection.is_active == True
+            )
+            .order_by(
+                EfootballSection.sort_order.asc()
+            )
+        )
+
+        sections = result.scalars().all()
+
+    keyboard = []
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🎮 مکس‌های eFootball",
+            callback_data="gallery"
+        )
+    ])
+
+    for section in sections:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=section.title,
+                callback_data=f"ef_section:{section.id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="home"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "🎮 ای فوتبال\n\n"
+        "یکی از بخش‌ها رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
 @dp.message(F.text == "☰ منوی اصلی")
 async def persistent_menu_handler(message: Message):
     await message.answer(
