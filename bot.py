@@ -449,6 +449,7 @@ async def efootball_callback(callback):
     )
 
     await callback.answer()
+    print("EFOOTBALL CALLBACK WORKED")
 def persistent_menu():
 
     return ReplyKeyboardMarkup(
