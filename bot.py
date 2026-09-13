@@ -1007,7 +1007,7 @@ async def admin_publish_matches_callback(callback):
         buttons.append([
             InlineKeyboardButton(
                 text=f"🎯 پیش‌بینی بازی {number}",
-                callback_data=f"predict_match:{match.id}"
+                callback_data=f"match:{match.id}"
             )
         ])
 
