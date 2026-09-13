@@ -4368,6 +4368,18 @@ async def ef_edit_content_video_handler(message: Message):
     await message.answer(
         "✅ ویدیو و کپشن با موفقیت ویرایش شد! 🎬🔥"
     )
+    async def load_admins():
+    ADMIN_IDS.clear()
+
+    async with Session() as session:
+        result = await session.execute(
+            select(Admin.telegram_id)
+        )
+
+        admin_ids = result.scalars().all()
+
+    ADMIN_IDS.update(admin_ids)
+    ADMIN_IDS.update(SUPER_ADMIN_IDS)
 async def main():
 
     await init_db()
