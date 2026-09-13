@@ -2131,7 +2131,9 @@ async def select_match(callback):
     lambda message: pending_match.get(message.from_user.id) in (
         "admin_gallery_player",
         "gallery_search",
-        "ef_add_section"
+        "ef_add_section",
+        "ef_edit_section",
+        "ef_delete_section"
     )
 )
 async def gallery_player_name_handler(message: Message):
@@ -2139,7 +2141,9 @@ async def gallery_player_name_handler(message: Message):
     user_id = message.from_user.id
     pending = pending_match.get(user_id)
 
+    # =========================
     # افزودن بخش eFootball
+    # =========================
     if is_admin(user_id) and pending == "ef_add_section":
 
         title = message.text.strip()
@@ -2183,7 +2187,130 @@ async def gallery_player_name_handler(message: Message):
 
         return
 
+    # =========================
+    # ویرایش بخش eFootball
+    # =========================
+    if is_admin(user_id) and pending == "ef_edit_section":
+
+        new_title = message.text.strip()
+
+        if not new_title:
+            await message.answer(
+                "❌ اسم بخش نمی‌تونه خالی باشه."
+            )
+            return
+
+        section_id = pending_match.get(
+            f"{user_id}_edit_section"
+        )
+
+        if not section_id:
+            pending_match.pop(user_id, None)
+            await message.answer(
+                "❌ بخش پیدا نشد. دوباره امتحان کن."
+            )
+            return
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(EfootballSection).where(
+                    EfootballSection.id == section_id
+                )
+            )
+
+            section = result.scalar_one_or_none()
+
+            if not section:
+                pending_match.pop(user_id, None)
+                pending_match.pop(
+                    f"{user_id}_edit_section",
+                    None
+                )
+
+                await message.answer(
+                    "❌ بخش پیدا نشد."
+                )
+                return
+
+            old_title = section.title
+            section.title = new_title
+
+            await session.commit()
+
+        pending_match.pop(user_id, None)
+        pending_match.pop(
+            f"{user_id}_edit_section",
+            None
+        )
+
+        await message.answer(
+            f"✅ بخش با موفقیت ویرایش شد! 🎮\n\n"
+            f"قبل: {old_title}\n"
+            f"بعد: {new_title}"
+        )
+
+        return
+
+    # =========================
+    # حذف بخش eFootball
+    # =========================
+    if is_admin(user_id) and pending == "ef_delete_section":
+
+        section_id = pending_match.get(
+            f"{user_id}_delete_section"
+        )
+
+        if not section_id:
+            pending_match.pop(user_id, None)
+
+            await message.answer(
+                "❌ بخش پیدا نشد. دوباره امتحان کن."
+            )
+            return
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(EfootballSection).where(
+                    EfootballSection.id == section_id
+                )
+            )
+
+            section = result.scalar_one_or_none()
+
+            if not section:
+                pending_match.pop(user_id, None)
+                pending_match.pop(
+                    f"{user_id}_delete_section",
+                    None
+                )
+
+                await message.answer(
+                    "❌ بخش پیدا نشد."
+                )
+                return
+
+            title = section.title
+
+            await session.delete(section)
+            await session.commit()
+
+        pending_match.pop(user_id, None)
+        pending_match.pop(
+            f"{user_id}_delete_section",
+            None
+        )
+
+        await message.answer(
+            f"🗑️ بخش «{title}» با موفقیت حذف شد."
+        )
+
+        return
+
+    # =========================
     # افزودن مکس توسط ادمین
+    # =========================
     if is_admin(user_id) and pending == "admin_gallery_player":
 
         player_name = message.text.strip()
@@ -2205,7 +2332,9 @@ async def gallery_player_name_handler(message: Message):
 
         return
 
+    # =========================
     # جستجوی مکس توسط کاربر
+    # =========================
     if pending == "gallery_search":
 
         player_name = message.text.strip()
