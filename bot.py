@@ -770,9 +770,18 @@ async def persistent_menu_handler(message: Message):
         reply_markup=main_menu()
     )
 
-ADMIN_IDS = {6833441844, 1116170821}
+SUPER_ADMIN_IDS = {
+    6833441844,
+    1116170821
+}
+
+ADMIN_IDS = set(SUPER_ADMIN_IDS)
+
 def is_admin(user_id):
     return user_id in ADMIN_IDS
+
+def is_super_admin(user_id):
+    return user_id in SUPER_ADMIN_IDS
 pending_match = {}
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
