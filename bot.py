@@ -924,62 +924,62 @@ async def admin_panel_callback(callback):
         return
 
     keyboard_buttons = [
-    [
-        InlineKeyboardButton(
-            text="➕ افزودن بازی",
-            callback_data="admin_add_match"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text="🎮 افزودن مکس eFootball",
-            callback_data="admin_add_gallery"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text="🎮 مدیریت eFootball",
-            callback_data="admin_efootball"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text="📋 مدیریت بازی‌ها",
-            callback_data="admin_matches"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text="🏁 ثبت نتیجه",
-            callback_data="admin_result"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text="👥 آمار کاربران",
-            callback_data="admin_stats"
-        )
+        [
+            InlineKeyboardButton(
+                text="➕ افزودن بازی",
+                callback_data="admin_add_match"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 افزودن مکس eFootball",
+                callback_data="admin_add_gallery"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 مدیریت eFootball",
+                callback_data="admin_efootball"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📋 مدیریت بازی‌ها",
+                callback_data="admin_matches"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🏁 ثبت نتیجه",
+                callback_data="admin_result"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="👥 آمار کاربران",
+                callback_data="admin_stats"
+            )
+        ]
     ]
-]
 
-if is_super_admin(callback.from_user.id):
+    if is_super_admin(callback.from_user.id):
+        keyboard_buttons.append([
+            InlineKeyboardButton(
+                text="👑 مدیریت ادمین‌ها",
+                callback_data="admin_manage"
+            )
+        ])
+
     keyboard_buttons.append([
         InlineKeyboardButton(
-            text="👑 مدیریت ادمین‌ها",
-            callback_data="admin_manage"
+            text="🔙 بازگشت",
+            callback_data="home"
         )
     ])
 
-keyboard_buttons.append([
-    InlineKeyboardButton(
-        text="🔙 بازگشت",
-        callback_data="home"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=keyboard_buttons
     )
-])
-
-keyboard = InlineKeyboardMarkup(
-    inline_keyboard=keyboard_buttons
-)
 
     await callback.message.edit_text(
         "⚙️ پنل مدیریت\n\n"
