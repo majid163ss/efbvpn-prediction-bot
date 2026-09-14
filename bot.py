@@ -102,6 +102,26 @@ class User(Base):
         index=True
     )
 
+        level: Mapped[int] = mapped_column(
+        Integer,
+        default=1
+    )
+
+    current_streak: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
+
+    best_streak: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
+
+    medals: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True
+    )
+
     username: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True
