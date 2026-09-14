@@ -855,6 +855,7 @@ async def persistent_menu_handler(message: Message):
         reply_markup=main_menu()
     )
 
+
 SUPER_ADMIN_IDS = {
     6833441844,
     1116170821
@@ -862,12 +863,17 @@ SUPER_ADMIN_IDS = {
 
 ADMIN_IDS = set(SUPER_ADMIN_IDS)
 
+
 def is_admin(user_id):
     return user_id in ADMIN_IDS
 
+
 def is_super_admin(user_id):
     return user_id in SUPER_ADMIN_IDS
+
+
 pending_match = {}
+
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
 
@@ -875,9 +881,17 @@ REQUIRED_GROUP = "@EFbVpn_Gp"
 async def is_member(bot, user_id, chat_username):
 
     try:
+
         member = await bot.get_chat_member(
             chat_username,
             user_id
+        )
+
+        print(
+            f"👤 Membership check | "
+            f"user={user_id} | "
+            f"chat={chat_username} | "
+            f"status={member.status}"
         )
 
         return member.status in {
@@ -886,7 +900,15 @@ async def is_member(bot, user_id, chat_username):
             ChatMemberStatus.CREATOR
         }
 
-    except Exception:
+    except Exception as e:
+
+        print(
+            f"❌ Membership error | "
+            f"user={user_id} | "
+            f"chat={chat_username} | "
+            f"error={e}"
+        )
+
         return False
 
 # =========================
