@@ -4096,7 +4096,6 @@ async def prediction_handler(message: Message):
         )
 @dp.message(F.text)
 async def giveaway_message_handler(message: Message):
-async def giveaway_message_handler(message: Message):
 
     print(
         f"🎲 GIVEAWAY MESSAGE | "
