@@ -1623,13 +1623,14 @@ async def admin_list_callback(callback):
 # RECEIVE ADMIN ID
 # =========================
 
-@dp.message(F.text.regexp(r"^\d+$"))
+@dp.message(
+    F.text.regexp(r"^\d+$"),
+    lambda message: message.from_user.id not in pending_giveaway
+)
 async def admin_id_input_handler(message: Message):
 
-    user_id = message.from_user.id
-
-    if user_id in pending_giveaway:
-        return
+    user_id = message.from_use
+    
 
     if not is_super_admin(user_id):
         return
