@@ -380,7 +380,7 @@ class EfootballContent(Base):
         Boolean,
         default=True
     )
-    class Giveaway(Base):
+class Giveaway(Base):
     __tablename__ = "giveaways"
 
     id: Mapped[int] = mapped_column(
