@@ -3332,7 +3332,7 @@ async def prediction_handler(message: Message):
     # ثبت نتیجه توسط ادمین
     # =========================
 
-        if (
+            if (
         is_admin(user_id)
         and isinstance(pending, str)
         and pending.startswith("admin_result:")
