@@ -383,7 +383,10 @@ class EfootballContent(Base):
     class Giveaway(Base):
     __tablename__ = "giveaways"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
 
     title: Mapped[str] = mapped_column(
         String(200),
