@@ -5455,6 +5455,146 @@ async def weekly_prize_send_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "weekly_prize_announce")
+async def weekly_prize_announce_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    now = datetime.now(
+        IRAN_TIMEZONE
+    ).replace(tzinfo=None)
+
+    days_since_saturday = (
+        now.weekday() + 2
+    ) % 7
+
+    start_of_week = (
+        now - timedelta(
+            days=days_since_saturday
+        )
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    end_of_week = (
+        start_of_week + timedelta(days=7)
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                User,
+                func.coalesce(
+                    func.sum(Prediction.points),
+                    0
+                ).label("weekly_points")
+            )
+            .join(
+                Prediction,
+                Prediction.user_id == User.id
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week,
+                Match.is_finished == True
+            )
+            .group_by(User.id)
+            .order_by(
+                func.sum(Prediction.points).desc()
+            )
+            .limit(1)
+        )
+
+        winner_row = result.first()
+
+        prize_result = await session.execute(
+            select(WeeklyPrize)
+            .where(
+                WeeklyPrize.week_start == start_of_week
+            )
+            .order_by(
+                WeeklyPrize.id.asc()
+            )
+            .limit(1)
+        )
+
+        prize = prize_result.scalar_one_or_none()
+
+    if not winner_row:
+
+        await callback.message.answer(
+            "📢 اعلام برنده\n\n"
+            "❌ هنوز برنده‌ای برای این هفته وجود ندارد."
+        )
+
+        await callback.answer()
+        return
+
+    if not prize:
+
+        await callback.message.answer(
+            "📢 اعلام برنده\n\n"
+            "❌ برای این هفته جایزه‌ای ثبت نشده."
+        )
+
+        await callback.answer()
+        return
+
+    winner, weekly_points = winner_row
+
+    winner_name = (
+        winner.first_name
+        or winner.username
+        or "کاربر"
+    )
+
+    try:
+
+        await bot.send_message(
+            chat_id=REQUIRED_CHANNEL,
+            text=(
+                "🏆 برنده لیگ این هفته مشخص شد! 🎉\n\n"
+                f"👤 برنده: {winner_name}\n"
+                f"⭐ امتیاز: {weekly_points}\n"
+                f"🎁 جایزه: {prize.prize_name}\n\n"
+                "تبریک به برنده ❤️🔥"
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            f"❌ Weekly winner announce error: {e}"
+        )
+
+        await callback.message.answer(
+            "❌ اعلام برنده در کانال انجام نشد.\n\n"
+            "مطمئن شو ربات در کانال دسترسی ارسال پیام دارد."
+        )
+
+        await callback.answer()
+        return
+
+    await callback.message.answer(
+        "✅ برنده با موفقیت در کانال اعلام شد.\n\n"
+        f"👤 {winner_name}\n"
+        f"🎁 {prize.prize_name}"
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
