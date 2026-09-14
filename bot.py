@@ -380,6 +380,74 @@ class EfootballContent(Base):
         Boolean,
         default=True
     )
+    class Giveaway(Base):
+    __tablename__ = "giveaways"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
+
+    prize: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False
+    )
+
+    end_time: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False
+    )
+
+    winner_count: Mapped[int] = mapped_column(
+        Integer,
+        default=1
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
+
+    is_drawn: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+
+class GiveawayParticipant(Base):
+    __tablename__ = "giveaway_participants"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    giveaway_id: Mapped[int] = mapped_column(
+        ForeignKey("giveaways.id")
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "giveaway_id",
+            "user_id"
+        ),
+    )
     
 
 
