@@ -3390,7 +3390,7 @@ user_result = await session.execute(
 
 user = user_result.scalar_one_or_none()
 
-                    if user:
+                     if user:
                          user.total_points 
 += points
 
