@@ -1241,6 +1241,12 @@ async def admin_panel_callback(callback):
             )
         ]
     ]
+            [
+            InlineKeyboardButton(
+                text="🎲 مدیریت قرعه‌کشی",
+                callback_data="admin_giveaway"
+            )
+            ]
 
     if is_super_admin(callback.from_user.id):
         keyboard_buttons.append([
