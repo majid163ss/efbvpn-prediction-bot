@@ -4099,14 +4099,15 @@ async def prediction_handler(message: Message):
     lambda message: message.from_user.id in pending_giveaway
 )
 async def giveaway_message_handler(message: Message):
-        print(
+
+    print(
         f"🎲 GIVEAWAY MESSAGE | "
         f"user={message.from_user.id} | "
         f"text={message.text!r} | "
         f"pending={pending_giveaway.get(message.from_user.id)}"
     )
 
-       user_id = message.from_user.id
+    user_id = message.from_user.id
 
     if not is_admin(user_id):
         return
