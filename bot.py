@@ -5211,6 +5211,98 @@ async def weekly_prizes_list_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "weekly_prize_winner")
+async def weekly_prize_winner_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    now = datetime.now(
+        IRAN_TIMEZONE
+    ).replace(tzinfo=None)
+
+    days_since_saturday = (
+        now.weekday() + 2
+    ) % 7
+
+    start_of_week = (
+        now - timedelta(
+            days=days_since_saturday
+        )
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    end_of_week = (
+        start_of_week + timedelta(days=7)
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(
+                User,
+                func.coalesce(
+                    func.sum(Prediction.points),
+                    0
+                ).label("weekly_points")
+            )
+            .join(
+                Prediction,
+                Prediction.user_id == User.id
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week,
+                Match.is_finished == True
+            )
+            .group_by(User.id)
+            .order_by(
+                func.sum(Prediction.points).desc()
+            )
+            .limit(1)
+        )
+
+        row = result.first()
+
+    if not row:
+
+        await callback.message.answer(
+            "🏆 انتخاب برنده هفته\n\n"
+            "❌ هنوز هیچ کاربری امتیاز ثبت‌شده‌ای برای این هفته ندارد."
+        )
+
+        await callback.answer()
+        return
+
+    user, weekly_points = row
+
+    name = (
+        user.first_name
+        or user.username
+        or "کاربر"
+    )
+
+    await callback.message.answer(
+        "🏆 برنده این هفته\n\n"
+        f"👤 {name}\n"
+        f"🆔 {user.telegram_id}\n"
+        f"⭐ امتیاز: {weekly_points}\n\n"
+        "✅ برنده با بیشترین امتیاز انتخاب شد."
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
