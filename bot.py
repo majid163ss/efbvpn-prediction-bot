@@ -3400,16 +3400,31 @@ async def prediction_handler(message: Message):
 
                 user = user_result.scalar_one_or_none()
 
-                if user:
+                                if user:
+
                     user.total_points += points
 
+                    # 🎖️ محاسبه سطح
                     user.level = get_level(
                         user.total_points
                     )
 
+                    # 🏅 مدال
                     user.medals = get_medal(
                         user.level
                     )
+
+                    # 🔥 رکورد پیاپی
+                    if points >= 3:
+
+                        user.current_streak += 1
+
+                        if user.current_streak > user.best_streak:
+                            user.best_streak = user.current_streak
+
+                    else:
+
+                        user.current_streak = 0
 
             await session.commit()
 
