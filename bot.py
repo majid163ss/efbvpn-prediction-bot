@@ -4094,6 +4094,199 @@ async def prediction_handler(message: Message):
             f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
             reply_markup=main_menu()
         )
+    @dp.message(
+    F.text,
+    lambda message: message.from_user.id in pending_giveaway
+)
+async def giveaway_message_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_giveaway.get(user_id)
+
+    if not pending:
+        return
+
+    text = message.text.strip()
+
+    if not text:
+        return
+
+    # مرحله ۱: عنوان قرعه‌کشی
+    if pending.get("step") == "title":
+
+        pending["title"] = text
+        pending["step"] = "prize"
+
+        await message.answer(
+            "🎁 حالا اسم یا توضیح جایزه رو وارد کن:"
+        )
+
+        return
+
+    # مرحله ۲: جایزه
+    if pending.get("step") == "prize":
+
+        pending["prize"] = text
+        pending["step"] = "winner_count"
+
+        await message.answer(
+            "👥 چند نفر برنده بشن؟\n\n"
+            "فقط یک عدد بفرست.\n"
+            "مثلاً: 3"
+        )
+
+        return
+
+    # مرحله ۳: تعداد برنده
+    if pending.get("step") == "winner_count":
+
+        try:
+            winner_count = int(text)
+        except ValueError:
+            await message.answer(
+                "❌ لطفاً فقط عدد وارد کن.\n"
+                "مثلاً: 3"
+            )
+            return
+
+        if winner_count < 1 or winner_count > 100:
+            await message.answer(
+                "❌ تعداد برنده باید بین 1 تا 100 باشه."
+            )
+            return
+
+        pending["winner_count"] = winner_count
+        pending["step"] = "codes"
+
+        await message.answer(
+            "🎟 حالا کد یا جایزه اختصاصی برنده‌ها رو وارد کن.\n\n"
+            "اگر چند برنده داری، هر کد رو در یک خط بنویس.\n\n"
+            "مثلاً:\n"
+            "CODE-001\n"
+            "CODE-002\n"
+            "CODE-003"
+        )
+
+        return
+
+    # مرحله ۴: کدهای جایزه
+    if pending.get("step") == "codes":
+
+        codes = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip()
+        ]
+
+        winner_count = pending.get("winner_count", 1)
+
+        if len(codes) < winner_count:
+            await message.answer(
+                f"❌ برای {winner_count} برنده، "
+                f"حداقل {winner_count} کد یا جایزه وارد کن."
+            )
+            return
+
+        pending["prize_codes"] = codes
+        pending["step"] = "end_time"
+
+        await message.answer(
+            "⏰ حالا تاریخ و ساعت پایان قرعه‌کشی رو وارد کن.\n\n"
+            "فرمت:\n"
+            "YYYY-MM-DD HH:MM\n\n"
+            "مثلاً:\n"
+            "2026-09-20 21:00"
+        )
+
+        return
+
+    # مرحله ۵: زمان پایان
+    if pending.get("step") == "end_time":
+
+        try:
+            end_time = datetime.strptime(
+                text,
+                "%Y-%m-%d %H:%M"
+            )
+        except ValueError:
+
+            await message.answer(
+                "❌ فرمت تاریخ اشتباهه.\n\n"
+                "مثال درست:\n"
+                "2026-09-20 21:00"
+            )
+
+            return
+
+        now = datetime.now(
+            IRAN_TIMEZONE
+        ).replace(tzinfo=None)
+
+        if end_time <= now:
+
+            await message.answer(
+                "❌ زمان پایان باید در آینده باشه."
+            )
+
+            return
+
+        title = pending.get("title")
+        prize = pending.get("prize")
+        winner_count = pending.get("winner_count")
+        prize_codes = pending.get("prize_codes", [])
+
+        if not title or not prize:
+
+            pending_giveaway.pop(
+                user_id,
+                None
+            )
+
+            await message.answer(
+                "❌ اطلاعات قرعه‌کشی ناقص بود.\n"
+                "دوباره شروع کن."
+            )
+
+            return
+
+        async with Session() as session:
+
+            giveaway = Giveaway(
+                title=title,
+                prize=prize,
+                prize_codes="\n".join(prize_codes),
+                end_time=end_time,
+                winner_count=winner_count,
+                is_active=True,
+                is_drawn=False,
+                is_announced=False
+            )
+
+            session.add(giveaway)
+
+            await session.commit()
+
+            giveaway_id = giveaway.id
+
+        pending_giveaway.pop(
+            user_id,
+            None
+        )
+
+        await message.answer(
+            "✅ قرعه‌کشی با موفقیت ساخته شد!\n\n"
+            f"🎲 عنوان: {title}\n"
+            f"🎁 جایزه: {prize}\n"
+            f"👥 تعداد برنده: {winner_count}\n"
+            f"⏰ پایان: {text}\n\n"
+            "📢 در مرحله بعد، قرعه‌کشی رو در کانال منتشر می‌کنیم."
+        )
+
+        return
 @dp.message(F.text)
 async def weekly_prize_message_handler(message: Message):
 
