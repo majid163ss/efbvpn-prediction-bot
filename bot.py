@@ -3381,13 +3381,13 @@ if match.is_special:
     points *= 2
 
 prediction.points = points
-                user_result = await session.execute(
+user_result = await session.execute(
                     select(User).where(
-                        User.id == prediction.user_id
+User.id == prediction.user_id
                     )
                 )
 
-                user = user_result.scalar_one_or_none()
+user = user_result.scalar_one_or_none()
 
                 if user:
                     user.total_points += points
