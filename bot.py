@@ -3367,35 +3367,33 @@ async def prediction_handler(message: Message):
 
             predictions = result.scalars().all()
 
-            for prediction in predictions:
+                    for prediction in predictions:
 
-                points = calculate_points(
-    prediction.home_pred,
-    prediction.away_pred,
-    home_score,
-    away_score
-)
+            points = calculate_points(
+                prediction.home_pred,
+                prediction.away_pred,
+                home_score,
+                away_score
+            )
 
-# 🎯 بازی ویژه = امتیاز ×۲
-if match.is_special:
-    points *= 2
+            # 🎯 بازی ویژه = امتیاز ×۲
+            if match.is_special:
+                points *= 2
 
-prediction.points = points
+            prediction.points = points
 
-                prediction.points = points
-
-                user_result = await session.execute(
-                    select(User).where(
-                        User.id == prediction.user_id
-                    )
+            user_result = await session.execute(
+                select(User).where(
+                    User.id == prediction.user_id
                 )
+            )
 
-                user = user_result.scalar_one_or_none()
+            user = user_result.scalar_one_or_none()
 
-                if user:
-                    user.total_points += points
+            if user:
+                user.total_points += points
 
-            await session.commit()
+        await session.commit()
 
         pending_match.pop(user_id, None)
 
