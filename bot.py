@@ -3400,7 +3400,7 @@ async def prediction_handler(message: Message):
 
                 user = user_result.scalar_one_or_none()
 
-                                if user:
+                if user:
 
                     user.total_points += points
 
@@ -3419,7 +3419,7 @@ async def prediction_handler(message: Message):
 
                         user.current_streak += 1
 
-                        if user.current_streak > user.best_streak:
+                    if user.current_streak > user.best_streak:
                             user.best_streak = user.current_streak
 
                     else:
