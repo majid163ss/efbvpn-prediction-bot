@@ -3366,92 +3366,7 @@ async def gallery_photo_handler(message: Message):
         f"✅ مکس {player_name} با موفقیت ذخیره شد! 🎮🔥\n\n"
         "کاربران می‌تونن با جستجوی اسم بازیکن پیداش کنن."
     )
-@dp.message(F.text)
-async def weekly_prize_message_handler(message: Message):
 
-    user_id = message.from_user.id
-
-    if not is_admin(user_id):
-        return
-
-    pending = pending_prize.get(user_id)
-
-    if not pending:
-        return
-
-    text = message.text.strip()
-
-    if not text:
-        return
-
-    # مرحله اول: دریافت نام جایزه
-    if pending.get("step") == "name":
-
-        pending["prize_name"] = text
-        pending["step"] = "content"
-
-        await message.answer(
-            "🔑 حالا کد یا متن جایزه رو وارد کن:\n\n"
-            "مثلاً:\n"
-            "ABC123XYZ\n\n"
-            "اگر جایزه کد ندارد، می‌تونی توضیحات جایزه رو بنویسی."
-        )
-
-        return
-
-    # مرحله دوم: دریافت کد یا متن جایزه
-    if pending.get("step") == "content":
-
-        prize_name = pending.get("prize_name")
-
-        if not prize_name:
-            pending_prize.pop(user_id, None)
-
-            await message.answer(
-                "❌ اطلاعات جایزه ناقص بود. دوباره تلاش کن."
-            )
-
-            return
-
-        now = datetime.now(
-            IRAN_TIMEZONE
-        ).replace(tzinfo=None)
-
-        days_since_saturday = (
-            now.weekday() + 2
-        ) % 7
-
-        start_of_week = (
-            now - timedelta(
-                days=days_since_saturday
-            )
-        ).replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
-        )
-
-        async with Session() as session:
-
-            prize = WeeklyPrize(
-                week_start=start_of_week,
-                prize_name=prize_name,
-                prize_content=text
-            )
-
-            session.add(prize)
-
-            await session.commit()
-
-        pending_prize.pop(user_id, None)
-
-        await message.answer(
-            "✅ جایزه با موفقیت ثبت شد.\n\n"
-            f"🎁 جایزه: {prize_name}\n"
-            f"🔑 محتوا: {text}\n\n"
-            "📅 مربوط به لیگ این هفته است."
-        )
 @dp.message(F.text.regexp(r"^\d+\s*-\s*\d+$"))
 async def prediction_handler(message: Message):
 
@@ -3866,6 +3781,92 @@ async def prediction_handler(message: Message):
             f"{match.away_team}\n\n"
             f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
             reply_markup=main_menu()
+        )
+@dp.message(F.text)
+async def weekly_prize_message_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if not is_admin(user_id):
+        return
+
+    pending = pending_prize.get(user_id)
+
+    if not pending:
+        return
+
+    text = message.text.strip()
+
+    if not text:
+        return
+
+    # مرحله اول: دریافت نام جایزه
+    if pending.get("step") == "name":
+
+        pending["prize_name"] = text
+        pending["step"] = "content"
+
+        await message.answer(
+            "🔑 حالا کد یا متن جایزه رو وارد کن:\n\n"
+            "مثلاً:\n"
+            "ABC123XYZ\n\n"
+            "اگر جایزه کد ندارد، می‌تونی توضیحات جایزه رو بنویسی."
+        )
+
+        return
+
+    # مرحله دوم: دریافت کد یا متن جایزه
+    if pending.get("step") == "content":
+
+        prize_name = pending.get("prize_name")
+
+        if not prize_name:
+            pending_prize.pop(user_id, None)
+
+            await message.answer(
+                "❌ اطلاعات جایزه ناقص بود. دوباره تلاش کن."
+            )
+
+            return
+
+        now = datetime.now(
+            IRAN_TIMEZONE
+        ).replace(tzinfo=None)
+
+        days_since_saturday = (
+            now.weekday() + 2
+        ) % 7
+
+        start_of_week = (
+            now - timedelta(
+                days=days_since_saturday
+            )
+        ).replace(
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0
+        )
+
+        async with Session() as session:
+
+            prize = WeeklyPrize(
+                week_start=start_of_week,
+                prize_name=prize_name,
+                prize_content=text
+            )
+
+            session.add(prize)
+
+            await session.commit()
+
+        pending_prize.pop(user_id, None)
+
+        await message.answer(
+            "✅ جایزه با موفقیت ثبت شد.\n\n"
+            f"🎁 جایزه: {prize_name}\n"
+            f"🔑 محتوا: {text}\n\n"
+            "📅 مربوط به لیگ این هفته است."
         )
         
 
