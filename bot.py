@@ -5303,6 +5303,23 @@ async def weekly_prize_winner_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "weekly_prize_send")
+async def weekly_prize_send_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    await callback.message.answer(
+        "📩 ارسال خصوصی جایزه\n\n"
+        "این بخش فعلاً آماده‌سازی شده.\n"
+        "مرحله بعدی، انتخاب جایزه و ارسال خودکار آن به برنده است."
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
