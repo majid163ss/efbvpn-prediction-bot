@@ -1239,14 +1239,14 @@ async def admin_panel_callback(callback):
                 text="🎁 مدیریت جایزه هفتگی",
                 callback_data="admin_weekly_prize"
             )
-        ]
-    ]
-            [
+        ],
+        [
             InlineKeyboardButton(
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
             )
-            ]
+        ]
+    ]
 
     if is_super_admin(callback.from_user.id):
         keyboard_buttons.append([
