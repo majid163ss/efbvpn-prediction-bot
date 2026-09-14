@@ -2199,6 +2199,54 @@ async def admin_match_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data.startswith("toggle_special:"))
+async def toggle_special_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    match_id = int(
+        callback.data.split(":")[-1]
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match).where(
+                Match.id == match_id
+            )
+        )
+
+        match = result.scalar_one_or_none()
+
+        if not match:
+            await callback.answer(
+                "❌ بازی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        match.is_special = not match.is_special
+
+        await session.commit()
+
+        status = (
+            "🎯 بازی ویژه ×۲ فعال شد."
+            if match.is_special
+            else "⚪ بازی ویژه غیرفعال شد."
+        )
+
+    await callback.answer(
+        status,
+        show_alert=True
+    )
+
+    # باز کردن دوباره صفحه مدیریت همین بازی
+    await admin_match_callback(callback)
 @dp.callback_query(F.data.startswith("lock_match:"))
 async def lock_match_callback(callback):
 
