@@ -2057,86 +2057,6 @@ async def admin_matches_callback(callback):
             )
         )
         await callback.answer()
-@dp.callback_query(F.data == "admin_stats")
-async def admin_stats_callback(callback):
-
-    if not is_admin(callback.from_user.id):
-        await callback.answer(
-            "⛔ دسترسی نداری.",
-            show_alert=True
-        )
-        return
-
-    async with Session() as session:
-
-        # تعداد کل کاربران
-        result = await session.execute(
-            select(func.count(User.id))
-        )
-
-        total_users = result.scalar() or 0
-
-        # تعداد کاربرانی که حداقل یک پیش‌بینی ثبت کرده‌اند
-        result = await session.execute(
-            select(
-                func.count(
-                    func.distinct(Prediction.user_id)
-                )
-            )
-        )
-
-        prediction_users = result.scalar() or 0
-
-        # تعداد کل پیش‌بینی‌ها
-        result = await session.execute(
-            select(func.count(Prediction.id))
-        )
-
-        total_predictions = result.scalar() or 0
-
-        # تعداد بازی‌های ثبت‌شده
-        result = await session.execute(
-            select(func.count(Match.id))
-        )
-
-        total_matches = result.scalar() or 0
-
-        # تعداد بازی‌های تمام‌شده
-        result = await session.execute(
-            select(func.count(Match.id))
-            .where(
-                Match.is_finished == True
-            )
-        )
-
-        finished_matches = result.scalar() or 0
-
-    text = (
-        "👥 آمار کاربران\n\n"
-        f"👤 کل کاربران: {total_users}\n"
-        f"🎯 کاربران دارای پیش‌بینی: {prediction_users}\n"
-        f"📝 کل پیش‌بینی‌ها: {total_predictions}\n\n"
-        f"⚽ کل بازی‌ها: {total_matches}\n"
-        f"🏁 بازی‌های تمام‌شده: {finished_matches}"
-    )
-
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔙 بازگشت",
-                    callback_data="admin_panel"
-                )
-            ]
-        ]
-    )
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=keyboard
-    )
-
-    await callback.answer()
         return
 
     buttons = []
@@ -2165,6 +2085,78 @@ async def admin_stats_callback(callback):
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=buttons
         )
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "admin_stats")
+async def admin_stats_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(func.count(User.id))
+        )
+        total_users = result.scalar() or 0
+
+        result = await session.execute(
+            select(
+                func.count(
+                    func.distinct(Prediction.user_id)
+                )
+            )
+        )
+        prediction_users = result.scalar() or 0
+
+        result = await session.execute(
+            select(func.count(Prediction.id))
+        )
+        total_predictions = result.scalar() or 0
+
+        result = await session.execute(
+            select(func.count(Match.id))
+        )
+        total_matches = result.scalar() or 0
+
+        result = await session.execute(
+            select(func.count(Match.id))
+            .where(
+                Match.is_finished == True
+            )
+        )
+        finished_matches = result.scalar() or 0
+
+    text = (
+        "👥 آمار کاربران\n\n"
+        f"👤 کل کاربران: {total_users}\n"
+        f"🎯 کاربران دارای پیش‌بینی: {prediction_users}\n"
+        f"📝 کل پیش‌بینی‌ها: {total_predictions}\n\n"
+        f"⚽ کل بازی‌ها: {total_matches}\n"
+        f"🏁 بازی‌های تمام‌شده: {finished_matches}"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
     )
 
     await callback.answer()
