@@ -1415,6 +1415,28 @@ async def admin_giveaway_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "giveaway_create")
+async def giveaway_create_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    pending_giveaway[callback.from_user.id] = {
+        "step": "title"
+    }
+
+    await callback.message.edit_text(
+        "🎲 ایجاد قرعه‌کشی\n\n"
+        "📝 اول عنوان قرعه‌کشی رو وارد کن:\n\n"
+        "مثلاً:\n"
+        "🎁 قرعه‌کشی اشتراک ماهانه"
+    )
+
+    await callback.answer()
     # =========================
 # ADMIN MANAGEMENT
 # =========================
