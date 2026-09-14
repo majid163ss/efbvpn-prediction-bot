@@ -922,6 +922,7 @@ def is_super_admin(user_id):
 
 
 pending_match = {}
+pending_prize = {}
 
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
