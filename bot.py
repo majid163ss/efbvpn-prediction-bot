@@ -341,7 +341,56 @@ class EfootballContent(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ستون‌های جدید سیستم امتیازات
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN level INTEGER DEFAULT 1"
+                )
+            )
+        except Exception:
+            pass
 
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN current_streak INTEGER DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN best_streak INTEGER DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN medals VARCHAR(1000)"
+                )
+            )
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE matches "
+                    "ADD COLUMN is_special BOOLEAN DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
         # ثبت سوپر ادمین‌ها در دیتابیس
         for admin_id in SUPER_ADMIN_IDS:
             await conn.execute(
