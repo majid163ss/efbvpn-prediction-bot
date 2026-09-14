@@ -3332,7 +3332,7 @@ async def prediction_handler(message: Message):
     # ثبت نتیجه توسط ادمین
     # =========================
 
-            if (
+    if (
         is_admin(user_id)
         and isinstance(pending, str)
         and pending.startswith("admin_result:")
@@ -3353,16 +3353,12 @@ async def prediction_handler(message: Message):
             match = result.scalar_one_or_none()
 
             if not match:
-
-                pending_match.pop(
-                    user_id,
-                    None
-                )
+                pending_match.pop(user_id, None)
 
                 await message.answer(
-                    "❌ بازی پیدا نشد."
+                    "❌ بازی پیدا نشد.",
+                    reply_markup=main_menu()
                 )
-
                 return
 
             match.home_score = home_score
@@ -3404,12 +3400,17 @@ async def prediction_handler(message: Message):
                 if user:
                     user.total_points += points
 
+                    user.level = get_level(
+                        user.total_points
+                    )
+
+                    user.medals = get_medal(
+                        user.level
+                    )
+
             await session.commit()
 
-        pending_match.pop(
-            user_id,
-            None
-        )
+        pending_match.pop(user_id, None)
 
         await message.answer(
             f"✅ نتیجه با موفقیت ثبت شد!\n\n"
@@ -3424,14 +3425,33 @@ async def prediction_handler(message: Message):
     # ثبت پیش‌بینی کاربر
     # =========================
 
+    if not isinstance(pending, int):
+        await message.answer(
+            "❌ درخواست نامعتبر است."
+        )
+        return
+
     match_id = pending
 
     async with Session() as session:
 
-        user = await get_user(
-            session,
-            message
+        result = await session.execute(
+            select(User).where(
+                User.telegram_id == user_id
+            )
         )
+
+        user = result.scalar_one_or_none()
+
+        if not user:
+            user = User(
+                telegram_id=user_id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name
+            )
+
+            session.add(user)
+            await session.flush()
 
         result = await session.execute(
             select(Match).where(
@@ -3453,7 +3473,9 @@ async def prediction_handler(message: Message):
         locked = (
             match.is_locked
             or match.is_finished
-            or datetime.now(IRAN_TIMEZONE).replace(tzinfo=None) >= match.start_time
+            or datetime.now(
+                IRAN_TIMEZONE
+            ).replace(tzinfo=None) >= match.start_time
         )
 
         if locked:
@@ -3482,12 +3504,14 @@ async def prediction_handler(message: Message):
         else:
 
             prediction = Prediction(
-    user_id=user.id,
-    match_id=match.id,
-    home_pred=home_score,
-    away_pred=away_score,
-    points=0,
-    created_at=datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
+                user_id=user.id,
+                match_id=match.id,
+                home_pred=home_score,
+                away_pred=away_score,
+                points=0,
+                created_at=datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None)
             )
 
             session.add(prediction)
