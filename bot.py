@@ -5092,8 +5092,14 @@ async def admin_weekly_prize_callback(callback):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🎁 تعیین جایزه این هفته",
+                    text="🎁 افزودن جایزه",
                     callback_data="weekly_prize_set"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 جوایز این هفته",
+                    callback_data="weekly_prizes_list"
                 )
             ],
             [
@@ -5104,8 +5110,20 @@ async def admin_weekly_prize_callback(callback):
             ],
             [
                 InlineKeyboardButton(
-                    text="📢 اعلام برنده در کانال",
+                    text="📩 ارسال خصوصی جایزه",
+                    callback_data="weekly_prize_send"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📢 اعلام برنده‌ها",
                     callback_data="weekly_prize_announce"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📜 تاریخچه",
+                    callback_data="weekly_prize_history"
                 )
             ],
             [
@@ -5119,7 +5137,7 @@ async def admin_weekly_prize_callback(callback):
 
     await callback.message.edit_text(
         "🎁 مدیریت جایزه هفتگی\n\n"
-        "یکی از گزینه‌ها رو انتخاب کن:",
+        "می‌تونی برای هر هفته صفر، یک یا چند جایزه ثبت کنی.",
         reply_markup=keyboard
     )
 
