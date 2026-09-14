@@ -5595,6 +5595,72 @@ async def weekly_prize_announce_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "weekly_prize_history")
+async def weekly_prize_history_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(WeeklyPrize)
+            .order_by(
+                WeeklyPrize.id.desc()
+            )
+            .limit(30)
+        )
+
+        prizes = result.scalars().all()
+
+    if not prizes:
+
+        text = (
+            "📜 تاریخچه جوایز\n\n"
+            "❌ هنوز هیچ جایزه‌ای ثبت نشده."
+        )
+
+    else:
+
+        text = "📜 تاریخچه جوایز\n\n"
+
+        for index, prize in enumerate(
+            prizes,
+            start=1
+        ):
+
+            status = (
+                "✅ ارسال شده"
+                if prize.is_sent
+                else "⏳ ارسال نشده"
+            )
+
+            text += (
+                f"{index}. 🎁 {prize.prize_name}\n"
+                f"   {status}\n\n"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_weekly_prize"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
