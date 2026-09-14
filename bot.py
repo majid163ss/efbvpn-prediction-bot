@@ -102,6 +102,21 @@ class User(Base):
         index=True
     )
 
+
+    username: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    first_name: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    total_points: Mapped[int] = mapped_column(
+        Integer,
+        default=0
+    )
         level: Mapped[int] = mapped_column(
         Integer,
         default=1
@@ -120,21 +135,6 @@ class User(Base):
     medals: Mapped[str | None] = mapped_column(
         String(1000),
         nullable=True
-    )
-
-    username: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True
-    )
-
-    first_name: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True
-    )
-
-    total_points: Mapped[int] = mapped_column(
-        Integer,
-        default=0
     )
 
 
