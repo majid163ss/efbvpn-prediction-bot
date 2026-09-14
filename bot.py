@@ -4943,6 +4943,52 @@ async def ef_edit_content_video_handler(message: Message):
 
     ADMIN_IDS.update(admin_ids)
     ADMIN_IDS.update(SUPER_ADMIN_IDS)
+@dp.callback_query(F.data == "admin_weekly_prize")
+async def admin_weekly_prize_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🎁 تعیین جایزه این هفته",
+                    callback_data="weekly_prize_set"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏆 انتخاب برنده هفته",
+                    callback_data="weekly_prize_winner"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📢 اعلام برنده در کانال",
+                    callback_data="weekly_prize_announce"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "🎁 مدیریت جایزه هفتگی\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 
 
 async def main():
