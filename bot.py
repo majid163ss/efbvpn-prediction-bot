@@ -246,6 +246,55 @@ class WeeklyWinner(Base):
     points: Mapped[int] = mapped_column(
         Integer
     )
+
+
+class WeeklyPrize(Base):
+    __tablename__ = "weekly_prizes"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    week_start: Mapped[datetime] = mapped_column(
+        DateTime,
+        index=True
+    )
+
+    prize_name: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
+
+    prize_content: Mapped[str | None] = mapped_column(
+        String(5000),
+        nullable=True
+    )
+
+    winner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    is_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    is_announced: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
 class GalleryImage(Base):
     __tablename__ = "gallery_images"
 
