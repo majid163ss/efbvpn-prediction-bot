@@ -1078,11 +1078,11 @@ async def admin_panel_callback(callback):
             )
         ],
         [
-    InlineKeyboardButton(
-        text="📢 انتشار بازی‌ها در کانال",
-        callback_data="admin_publish_matches"
-    )
-],
+            InlineKeyboardButton(
+                text="📢 انتشار بازی‌ها در کانال",
+                callback_data="admin_publish_matches"
+            )
+        ],
         [
             InlineKeyboardButton(
                 text="🎮 افزودن مکس eFootball",
@@ -1111,6 +1111,12 @@ async def admin_panel_callback(callback):
             InlineKeyboardButton(
                 text="👥 آمار کاربران",
                 callback_data="admin_stats"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎁 مدیریت جایزه هفتگی",
+                callback_data="admin_weekly_prize"
             )
         ]
     ]
@@ -1141,94 +1147,6 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
-
-@dp.callback_query(F.data == "admin_publish_matches")
-async def admin_publish_matches_callback(callback):
-
-    if not is_admin(callback.from_user.id):
-        await callback.answer(
-            "⛔ دسترسی نداری.",
-            show_alert=True
-        )
-        return
-
-    async with Session() as session:
-
-        result = await session.execute(
-            select(Match)
-            .where(
-                Match.is_published == False,
-                Match.is_finished == False
-            )
-            .order_by(Match.start_time)
-        )
-
-        matches = result.scalars().all()
-
-    if not matches:
-        await callback.answer(
-            "⚠️ بازی جدیدی برای انتشار وجود ندارد.",
-            show_alert=True
-        )
-        return
-
-    text_message = "⚽️ بازی‌های جدید برای پیش‌بینی\n\n"
-
-    buttons = []
-
-    for number, match in enumerate(matches, start=1):
-
-        text_message += (
-            f"{number}️⃣ {match.home_team} 🆚 {match.away_team}\n"
-            f"⏰ {match.start_time.strftime('%Y-%m-%d %H:%M')}\n\n"
-        )
-
-        buttons.append([
-            InlineKeyboardButton(
-    text=f"🎯 پیش‌بینی بازی {number}",
-    url=f"https://t.me/EFbVpnPredictionBot?start=match_{match.id}"
-)
-        ])
-
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=buttons
-    )
-
-    try:
-        await bot.send_message(
-            chat_id=CHANNEL_USERNAME,
-            text=text_message,
-            reply_markup=keyboard
-        )
-
-    except Exception as e:
-
-        await callback.answer(
-            "❌ ارسال به کانال انجام نشد.\n\n"
-            "مطمئن شو ربات در کانال ادمین است.",
-            show_alert=True
-        )
-
-        print("CHANNEL PUBLISH ERROR:", e)
-        return
-
-    async with Session() as session:
-
-        for match in matches:
-            db_match = await session.get(
-                Match,
-                match.id
-            )
-
-            if db_match:
-                db_match.is_published = True
-
-        await session.commit()
-
-    await callback.answer(
-        "✅ همه بازی‌ها در یک پست منتشر شدند.",
-        show_alert=True
-    )
     # =========================
 # ADMIN MANAGEMENT
 # =========================
