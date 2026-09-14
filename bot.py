@@ -3370,14 +3370,17 @@ async def prediction_handler(message: Message):
             for prediction in predictions:
 
                 points = calculate_points(
-                    prediction.home_pred,
-                    prediction.away_pred,
-                    home_score,
-                    away_score
-                )
+    prediction.home_pred,
+    prediction.away_pred,
+    home_score,
+    away_score
+)
 
-                prediction.points = points
+# 🎯 بازی ویژه = امتیاز ×۲
+if match.is_special:
+    points *= 2
 
+prediction.points = points
                 user_result = await session.execute(
                     select(User).where(
                         User.id == prediction.user_id
