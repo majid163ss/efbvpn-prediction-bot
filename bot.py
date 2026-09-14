@@ -2854,7 +2854,7 @@ async def profile_callback(callback):
             if prediction.points == 5
         )
 
-        # درصد موفقیت فقط بر اساس بازی‌های تمام‌شده
+        # درصد موفقیت
         success_rate = (
             round(
                 (correct_predictions / finished_count) * 100
@@ -2874,7 +2874,9 @@ async def profile_callback(callback):
             f"👋 {name}\n\n"
             "━━━━━━━━━━━━━━\n\n"
             f"🏆 رتبه کلی: {rank}\n"
-            f"⭐ مجموع امتیاز: {user.total_points}\n\n"
+            f"⭐ مجموع امتیاز: {user.total_points}\n"
+            f"🔥 رکورد پیاپی: {user.current_streak}\n"
+            f"🏅 بهترین رکورد پیاپی: {user.best_streak}\n\n"
             f"🎯 کل پیش‌بینی‌ها: {total_predictions}\n"
             f"🏁 بازی‌های تمام‌شده: {finished_count}\n"
             f"✅ پیش‌بینی‌های موفق: {correct_predictions}\n"
@@ -2900,6 +2902,7 @@ async def profile_callback(callback):
         )
 
     await callback.answer()
+
 @dp.callback_query(F.data == "rules")
 async def rules_callback(callback):
 
