@@ -1628,6 +1628,9 @@ async def admin_id_input_handler(message: Message):
 
     user_id = message.from_user.id
 
+    if user_id in pending_giveaway:
+        return
+
     if not is_super_admin(user_id):
         return
 
