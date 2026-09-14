@@ -4094,7 +4094,7 @@ async def prediction_handler(message: Message):
             f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
             reply_markup=main_menu()
         )
-    @dp.message(
+@dp.message(
     F.text,
     lambda message: message.from_user.id in pending_giveaway
 )
