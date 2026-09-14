@@ -5313,10 +5313,144 @@ async def weekly_prize_send_callback(callback):
         )
         return
 
+    now = datetime.now(
+        IRAN_TIMEZONE
+    ).replace(tzinfo=None)
+
+    days_since_saturday = (
+        now.weekday() + 2
+    ) % 7
+
+    start_of_week = (
+        now - timedelta(
+            days=days_since_saturday
+        )
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    end_of_week = (
+        start_of_week + timedelta(days=7)
+    )
+
+    async with Session() as session:
+
+        # پیدا کردن برنده فعلی هفته
+        result = await session.execute(
+            select(
+                User,
+                func.coalesce(
+                    func.sum(Prediction.points),
+                    0
+                ).label("weekly_points")
+            )
+            .join(
+                Prediction,
+                Prediction.user_id == User.id
+            )
+            .join(
+                Match,
+                Match.id == Prediction.match_id
+            )
+            .where(
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week,
+                Match.is_finished == True
+            )
+            .group_by(User.id)
+            .order_by(
+                func.sum(Prediction.points).desc()
+            )
+            .limit(1)
+        )
+
+        winner_row = result.first()
+
+        # پیدا کردن اولین جایزه ارسال‌نشده
+        prize_result = await session.execute(
+            select(WeeklyPrize)
+            .where(
+                WeeklyPrize.week_start == start_of_week,
+                WeeklyPrize.is_sent == False
+            )
+            .order_by(
+                WeeklyPrize.id.asc()
+            )
+            .limit(1)
+        )
+
+        prize = prize_result.scalar_one_or_none()
+
+    if not winner_row:
+
+        await callback.message.answer(
+            "📩 ارسال خصوصی جایزه\n\n"
+            "❌ هنوز برنده‌ای برای این هفته وجود ندارد."
+        )
+
+        await callback.answer()
+        return
+
+    if not prize:
+
+        await callback.message.answer(
+            "📩 ارسال خصوصی جایزه\n\n"
+            "❌ هیچ جایزه ارسال‌نشده‌ای برای این هفته وجود ندارد."
+        )
+
+        await callback.answer()
+        return
+
+    winner, weekly_points = winner_row
+
+    try:
+
+        await bot.send_message(
+            chat_id=winner.telegram_id,
+            text=(
+                "🎁 تبریک! شما برنده جایزه این هفته شدید. 🏆\n\n"
+                f"🎁 جایزه: {prize.prize_name}\n\n"
+                f"🔑 کد / متن جایزه:\n{prize.prize_content}\n\n"
+                "از شرکت در لیگ هفتگی ممنونیم ❤️"
+            )
+        )
+
+    except Exception as e:
+
+        await callback.message.answer(
+            "❌ ارسال جایزه انجام نشد.\n\n"
+            "ممکنه کاربر هنوز ربات رو Start نکرده باشه."
+        )
+
+        await callback.answer()
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(WeeklyPrize)
+            .where(
+                WeeklyPrize.id == prize.id
+            )
+        )
+
+        prize_db = result.scalar_one_or_none()
+
+        if prize_db:
+
+            prize_db.is_sent = True
+            prize_db.sent_at = datetime.utcnow()
+
+            await session.commit()
+
     await callback.message.answer(
-        "📩 ارسال خصوصی جایزه\n\n"
-        "این بخش فعلاً آماده‌سازی شده.\n"
-        "مرحله بعدی، انتخاب جایزه و ارسال خودکار آن به برنده است."
+        "✅ جایزه با موفقیت برای برنده ارسال شد.\n\n"
+        f"👤 برنده: {winner.first_name or winner.username or 'کاربر'}\n"
+        f"🎁 جایزه: {prize.prize_name}\n"
+        f"⭐ امتیاز: {weekly_points}"
     )
 
     await callback.answer()
