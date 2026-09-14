@@ -476,6 +476,28 @@ def calculate_points(
         return 3
 
     return 0
+def get_level(points):
+    if points >= 200:
+        return 5
+    if points >= 100:
+        return 4
+    if points >= 50:
+        return 3
+    if points >= 20:
+        return 2
+    return 1
+
+
+def get_medal(level):
+    medals = {
+        1: "🥉",
+        2: "🥈",
+        3: "🥇",
+        4: "🏆",
+        5: "👑"
+    }
+
+    return medals.get(level, "🥉")
 
 
 # =========================
