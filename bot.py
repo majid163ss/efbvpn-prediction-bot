@@ -4106,7 +4106,7 @@ async def giveaway_message_handler(message: Message):
         f"pending={pending_giveaway.get(message.from_user.id)}"
     )
 
-    user_id = message.from_user.id
+       user_id = message.from_user.id
 
     if not is_admin(user_id):
         return
