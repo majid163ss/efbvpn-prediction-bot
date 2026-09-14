@@ -3369,7 +3369,7 @@ async def prediction_handler(message: Message):
 
                     for prediction in predictions:
 
-            points = calculate_points(
+                         points = calculate_points(
                 prediction.home_pred,
                 prediction.away_pred,
                 home_score,
