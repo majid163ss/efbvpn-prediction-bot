@@ -3332,9 +3332,15 @@ async def prediction_handler(message: Message):
     # ثبت نتیجه توسط ادمین
     # =========================
 
-    if is_admin(user_id) and isinstance(pending, str) and pending.startswith("admin_result:"):
+        if (
+        is_admin(user_id)
+        and isinstance(pending, str)
+        and pending.startswith("admin_result:")
+    ):
 
-        match_id = int(pending.split(":")[1])
+        match_id = int(
+            pending.split(":")[1]
+        )
 
         async with Session() as session:
 
@@ -3347,11 +3353,16 @@ async def prediction_handler(message: Message):
             match = result.scalar_one_or_none()
 
             if not match:
-                pending_match.pop(user_id, None)
+
+                pending_match.pop(
+                    user_id,
+                    None
+                )
 
                 await message.answer(
                     "❌ بازی پیدا نشد."
                 )
+
                 return
 
             match.home_score = home_score
@@ -3367,35 +3378,38 @@ async def prediction_handler(message: Message):
 
             predictions = result.scalars().all()
 
-                    for prediction in predictions:
+            for prediction in predictions:
 
-                         points = calculate_points(
-                prediction.home_pred,
-                prediction.away_pred,
-                home_score,
-                away_score
-            )
-
-            # 🎯 بازی ویژه = امتیاز ×۲
-            if match.is_special:
-                points *= 2
-
-            prediction.points = points
-
-            user_result = await session.execute(
-                select(User).where(
-                    User.id == prediction.user_id
+                points = calculate_points(
+                    prediction.home_pred,
+                    prediction.away_pred,
+                    home_score,
+                    away_score
                 )
-            )
 
-            user = user_result.scalar_one_or_none()
+                # 🎯 بازی ویژه = امتیاز ×۲
+                if match.is_special:
+                    points *= 2
 
-            if user:
-                user.total_points += points
+                prediction.points = points
 
-        await session.commit()
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == prediction.user_id
+                    )
+                )
 
-        pending_match.pop(user_id, None)
+                user = user_result.scalar_one_or_none()
+
+                if user:
+                    user.total_points += points
+
+            await session.commit()
+
+        pending_match.pop(
+            user_id,
+            None
+        )
 
         await message.answer(
             f"✅ نتیجه با موفقیت ثبت شد!\n\n"
