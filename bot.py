@@ -117,7 +117,7 @@ class User(Base):
         Integer,
         default=0
     )
-        level: Mapped[int] = mapped_column(
+    level: Mapped[int] = mapped_column(
         Integer,
         default=1
     )
