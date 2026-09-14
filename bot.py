@@ -5039,7 +5039,28 @@ async def admin_weekly_prize_callback(callback):
 
     await callback.answer()
 
+@dp.callback_query(F.data == "weekly_prize_set")
+async def weekly_prize_set_callback(callback):
 
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    pending_prize[callback.from_user.id] = {
+        "step": "name"
+    }
+
+    await callback.message.answer(
+        "🎁 افزودن جایزه\n\n"
+        "اسم جایزه رو وارد کن:\n\n"
+        "مثلاً:\n"
+        "🎫 اشتراک یک ماهه فیلترشکن"
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
