@@ -398,6 +398,11 @@ class Giveaway(Base):
         nullable=False
     )
 
+    prize_codes: Mapped[str | None] = mapped_column(
+        String(10000),
+        nullable=True
+    )
+
     end_time: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False
@@ -408,12 +413,22 @@ class Giveaway(Base):
         default=1
     )
 
+    channel_message_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True
     )
 
     is_drawn: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    is_announced: Mapped[bool] = mapped_column(
         Boolean,
         default=False
     )
@@ -451,6 +466,43 @@ class GiveawayParticipant(Base):
             "user_id"
         ),
     )
+
+
+class GiveawayWinner(Base):
+    __tablename__ = "giveaway_winners"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    giveaway_id: Mapped[int] = mapped_column(
+        ForeignKey("giveaways.id")
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+
+    prize_content: Mapped[str | None] = mapped_column(
+        String(5000),
+        nullable=True
+    )
+
+    is_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
     
 
 
@@ -461,6 +513,36 @@ class GiveawayParticipant(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+                # migration سیستم قرعه‌کشی
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE giveaways "
+                    "ADD COLUMN prize_codes VARCHAR(10000)"
+                )
+            )
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE giveaways "
+                    "ADD COLUMN channel_message_id INTEGER"
+                )
+            )
+        except Exception:
+            pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE giveaways "
+                    "ADD COLUMN is_announced BOOLEAN DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
         # ستون‌های جدید سیستم امتیازات
         try:
             await conn.execute(
