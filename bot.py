@@ -2109,10 +2109,12 @@ async def admin_match_callback(callback):
 
     print("RESULT CALLBACK DATA:", callback.data)
 
-    match_id = int(callback.data.split(":")[-1])
-    await callback.answer(f"ID: {match_id}", show_alert=True)
+    match_id = int(
+        callback.data.split(":")[-1]
+    )
 
     async with Session() as session:
+
         result = await session.execute(
             select(Match).where(
                 Match.id == match_id
@@ -2128,7 +2130,23 @@ async def admin_match_callback(callback):
         )
         return
 
-    status = "🔒 قفل شده" if match.is_locked else "🟢 باز"
+    status = (
+        "🔒 قفل شده"
+        if match.is_locked
+        else "🟢 باز"
+    )
+
+    special_status = (
+        "🎯 بازی ویژه ×۲"
+        if match.is_special
+        else "⚪ بازی معمولی"
+    )
+
+    special_button_text = (
+        "❌ غیرفعال کردن بازی ویژه"
+        if match.is_special
+        else "🎯 فعال کردن بازی ویژه ×۲"
+    )
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -2142,6 +2160,12 @@ async def admin_match_callback(callback):
                 InlineKeyboardButton(
                     text="🔓 باز کردن بازی",
                     callback_data=f"unlock_match:{match.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=special_button_text,
+                    callback_data=f"toggle_special:{match.id}"
                 )
             ],
             [
@@ -2168,7 +2192,8 @@ async def admin_match_callback(callback):
     await callback.message.edit_text(
         f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
         f"⏰ {match.start_time}\n"
-        f"📌 وضعیت: {status}\n\n"
+        f"📌 وضعیت: {status}\n"
+        f"🎯 وضعیت ویژه: {special_status}\n\n"
         "یکی از گزینه‌ها رو انتخاب کن:",
         reply_markup=keyboard
     )
