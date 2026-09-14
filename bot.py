@@ -3442,6 +3442,10 @@ async def prediction_handler(message: Message):
             match.is_finished = True
             match.is_locked = True
 
+            # =========================
+            # محاسبه امتیاز پیش‌بینی‌ها
+            # =========================
+
             result = await session.execute(
                 select(Prediction).where(
                     Prediction.match_id == match.id
@@ -3449,6 +3453,8 @@ async def prediction_handler(message: Message):
             )
 
             predictions = result.scalars().all()
+
+            game_winners = []
 
             for prediction in predictions:
 
@@ -3477,7 +3483,7 @@ async def prediction_handler(message: Message):
 
                     user.total_points += points
 
-                    # 🎖️ محاسبه سطح
+                    # 🎖️ سطح
                     user.level = get_level(
                         user.total_points
                     )
@@ -3492,22 +3498,187 @@ async def prediction_handler(message: Message):
 
                         user.current_streak += 1
 
-                    if user.current_streak > user.best_streak:
-                            user.best_streak = user.current_streak
+                        if (
+                            user.current_streak
+                            > user.best_streak
+                        ):
+                            user.best_streak = (
+                                user.current_streak
+                            )
 
                     else:
 
                         user.current_streak = 0
 
+                    # ذخیره برای جدول برترین‌های همین بازی
+                    game_winners.append(
+                        (
+                            user,
+                            prediction,
+                            points
+                        )
+                    )
+
             await session.commit()
 
-        pending_match.pop(user_id, None)
+            # =========================
+            # 🏆 مرتب‌سازی برترین‌های بازی
+            # =========================
+
+            game_winners.sort(
+                key=lambda x: x[2],
+                reverse=True
+            )
+
+            # =========================
+            # 🏆 جدول کلی امتیازات
+            # =========================
+
+            leaderboard_result = await session.execute(
+                select(User)
+                .order_by(
+                    User.total_points.desc()
+                )
+                .limit(5)
+            )
+
+            leaderboard_users = (
+                leaderboard_result.scalars().all()
+            )
+
+        # =========================
+        # 📢 ساخت پیام نتیجه کانال
+        # =========================
+
+        special_text = (
+            "\n🎯 این بازی ویژه بود و امتیازها ×۲ محاسبه شد."
+            if match.is_special
+            else ""
+        )
+
+        channel_text = (
+            "🏁 <b>نتیجه نهایی</b>\n\n"
+            f"⚽ <b>{match.home_team}</b> "
+            f"{home_score} - {away_score} "
+            f"<b>{match.away_team}</b>\n"
+            f"{special_text}\n\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "🏅 <b>برترین‌های این بازی</b>\n\n"
+        )
+
+        if game_winners:
+
+            medals = ["🥇", "🥈", "🥉"]
+
+            for index, (
+                user,
+                prediction,
+                points
+            ) in enumerate(
+                game_winners[:3]
+            ):
+
+                name = (
+                    f"@{user.username}"
+                    if user.username
+                    else user.first_name
+                    or "کاربر"
+                )
+
+                medal = medals[index]
+
+                channel_text += (
+                    f"{medal} {name} — "
+                    f"<b>{points} امتیاز</b>\n"
+                    f"   🎯 پیش‌بینی: "
+                    f"{prediction.home_pred}-"
+                    f"{prediction.away_pred}\n"
+                )
+
+        else:
+
+            channel_text += (
+                "❌ کسی برای این بازی پیش‌بینی ثبت نکرده.\n"
+            )
+
+        channel_text += (
+            "\n━━━━━━━━━━━━━━\n\n"
+            "🏆 <b>جدول امتیازات</b>\n\n"
+        )
+
+        if leaderboard_users:
+
+            rank_icons = [
+                "🥇",
+                "🥈",
+                "🥉",
+                "4️⃣",
+                "5️⃣"
+            ]
+
+            for index, user in enumerate(
+                leaderboard_users
+            ):
+
+                name = (
+                    f"@{user.username}"
+                    if user.username
+                    else user.first_name
+                    or "کاربر"
+                )
+
+                channel_text += (
+                    f"{rank_icons[index]} "
+                    f"{name} — "
+                    f"<b>{user.total_points} امتیاز</b>\n"
+                )
+
+        else:
+
+            channel_text += (
+                "هنوز جدول امتیازات تشکیل نشده.\n"
+            )
+
+        channel_text += (
+            "\n━━━━━━━━━━━━━━\n"
+            "🎯 برای شرکت در پیش‌بینی‌های بعدی، "
+            "بازی‌های کانال را دنبال کنید."
+        )
+
+        # =========================
+        # 📢 ارسال نتیجه به کانال
+        # =========================
+
+        try:
+
+            await bot.send_message(
+                CHANNEL_USERNAME,
+                channel_text,
+                parse_mode="HTML"
+            )
+
+        except Exception as e:
+
+            print(
+                "❌ خطا در ارسال نتیجه به کانال:",
+                e
+            )
+
+        # =========================
+        # پایان ثبت نتیجه برای ادمین
+        # =========================
+
+        pending_match.pop(
+            user_id,
+            None
+        )
 
         await message.answer(
             f"✅ نتیجه با موفقیت ثبت شد!\n\n"
             f"⚽ {match.home_team} "
             f"{home_score} - {away_score} "
-            f"{match.away_team}"
+            f"{match.away_team}\n\n"
+            "📢 نتیجه و جدول امتیازات در کانال منتشر شد."
         )
 
         return
