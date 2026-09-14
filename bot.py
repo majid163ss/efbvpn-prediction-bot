@@ -5165,6 +5165,96 @@ async def weekly_prize_set_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "weekly_prizes_list")
+async def weekly_prizes_list_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    now = datetime.now(
+        IRAN_TIMEZONE
+    ).replace(tzinfo=None)
+
+    days_since_saturday = (
+        now.weekday() + 2
+    ) % 7
+
+    start_of_week = (
+        now - timedelta(
+            days=days_since_saturday
+        )
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(WeeklyPrize)
+            .where(
+                WeeklyPrize.week_start == start_of_week
+            )
+            .order_by(
+                WeeklyPrize.id.asc()
+            )
+        )
+
+        prizes = result.scalars().all()
+
+    if not prizes:
+
+        text = (
+            "📋 جوایز این هفته\n\n"
+            "❌ هنوز هیچ جایزه‌ای ثبت نشده."
+        )
+
+    else:
+
+        text = (
+            "📋 جوایز این هفته\n\n"
+            f"🎁 تعداد جوایز: {len(prizes)}\n\n"
+        )
+
+        for index, prize in enumerate(
+            prizes,
+            start=1
+        ):
+
+            status = (
+                "📩 ارسال شده"
+                if prize.is_sent
+                else "⏳ ارسال نشده"
+            )
+
+            text += (
+                f"{index}. 🎁 {prize.prize_name}\n"
+                f"   {status}\n\n"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_weekly_prize"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 async def main():
     await init_db()
 
