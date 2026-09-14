@@ -181,6 +181,10 @@ class Match(Base):
     Boolean,
     default=False
     )
+    is_special: Mapped[bool] = mapped_column(
+    Boolean,
+    default=False
+    )
 
 
 class Prediction(Base):
