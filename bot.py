@@ -6780,11 +6780,330 @@ async def weekly_prize_history_callback(callback):
     )
 
     await callback.answer()
+# =========================================================
+# 🎲 سیستم قرعه‌کشی خودکار
+# =========================================================
+
+import secrets
+
+
+async def auto_draw_giveaways():
+
+    while True:
+
+        try:
+
+            async with Session() as session:
+
+                now = datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None)
+
+                result = await session.execute(
+                    select(Giveaway).where(
+                        Giveaway.is_active == True,
+                        Giveaway.is_drawn == False,
+                        Giveaway.end_time <= now
+                    ).order_by(
+                        Giveaway.id.asc()
+                    )
+                )
+
+                giveaways = result.scalars().all()
+
+                for giveaway in giveaways:
+
+                    print(
+                        f"🎲 شروع قرعه‌کشی خودکار | "
+                        f"giveaway={giveaway.id}"
+                    )
+
+                    # -----------------------------------------
+                    # دریافت شرکت‌کنندگان
+                    # -----------------------------------------
+
+                    participants_result = await session.execute(
+                        select(GiveawayParticipant).where(
+                            GiveawayParticipant.giveaway_id
+                            == giveaway.id
+                        )
+                    )
+
+                    participants = (
+                        participants_result
+                        .scalars()
+                        .all()
+                    )
+
+                    if not participants:
+
+                        giveaway.is_drawn = True
+                        giveaway.is_active = False
+
+                        await session.commit()
+
+                        try:
+
+                            await bot.send_message(
+                                chat_id=CHANNEL_USERNAME,
+                                text=(
+                                    "🎲 قرعه‌کشی به پایان رسید.\n\n"
+                                    f"🎁 {giveaway.title}\n"
+                                    "👥 تعداد شرکت‌کنندگان: 0 نفر\n\n"
+                                    "❌ متأسفانه کسی در این قرعه‌کشی "
+                                    "شرکت نکرده بود."
+                                )
+                            )
+
+                        except Exception as e:
+
+                            print(
+                                f"❌ خطا در اعلام قرعه‌کشی بدون شرکت‌کننده: "
+                                f"{e}"
+                            )
+
+                        continue
+
+                    # -----------------------------------------
+                    # تعیین تعداد برنده
+                    # -----------------------------------------
+
+                    winner_count = min(
+                        giveaway.winner_count,
+                        len(participants)
+                    )
+
+                    # -----------------------------------------
+                    # انتخاب کاملاً تصادفی
+                    # -----------------------------------------
+
+                    winners = secrets.SystemRandom().sample(
+                        participants,
+                        winner_count
+                    )
+
+                    # -----------------------------------------
+                    # دریافت کدها / جوایز
+                    # -----------------------------------------
+
+                    prize_codes = []
+
+                    if giveaway.prize_codes:
+
+                        prize_codes = [
+                            line.strip()
+                            for line in giveaway.prize_codes.splitlines()
+                            if line.strip()
+                        ]
+
+                    # اگر کد کافی نبود، خود جایزه استفاده می‌شود
+                    if len(prize_codes) < winner_count:
+
+                        while len(prize_codes) < winner_count:
+                            prize_codes.append(
+                                giveaway.prize
+                            )
+
+                    # -----------------------------------------
+                    # ثبت برنده‌ها
+                    # -----------------------------------------
+
+                    winner_results = []
+
+                    for index, participant in enumerate(winners):
+
+                        prize_content = prize_codes[index]
+
+                        winner = GiveawayWinner(
+                            giveaway_id=giveaway.id,
+                            user_id=participant.user_id,
+                            prize_content=prize_content,
+                            is_sent=False
+                        )
+
+                        session.add(winner)
+
+                        winner_results.append({
+                            "user_id": participant.user_id,
+                            "prize": prize_content
+                        })
+
+                    # -----------------------------------------
+                    # بستن قرعه‌کشی
+                    # -----------------------------------------
+
+                    giveaway.is_drawn = True
+                    giveaway.is_active = False
+
+                    await session.commit()
+
+                    # -----------------------------------------
+                    # اعلام نتیجه در کانال
+                    # -----------------------------------------
+
+                    result_text = (
+                        "🏆🎉 نتایج قرعه‌کشی 🎉🏆\n\n"
+                        f"🎲 {giveaway.title}\n"
+                        f"🎁 جایزه: {giveaway.prize}\n"
+                        f"👥 تعداد شرکت‌کنندگان: "
+                        f"{len(participants)} نفر\n\n"
+                        "🥳 برنده‌ها:\n\n"
+                    )
+
+                    for index, winner_info in enumerate(
+                        winner_results,
+                        start=1
+                    ):
+
+                        user_id = winner_info["user_id"]
+
+                        try:
+
+                            user_result = await session.execute(
+                                select(User).where(
+                                    User.id == user_id
+                                )
+                            )
+
+                            user = (
+                                user_result
+                                .scalar_one_or_none()
+                            )
+
+                            if user and user.username:
+
+                                winner_name = (
+                                    f"@{user.username}"
+                                )
+
+                            elif user and user.first_name:
+
+                                winner_name = (
+                                    user.first_name
+                                )
+
+                            else:
+
+                                winner_name = (
+                                    f"کاربر {user_id}"
+                                )
+
+                        except Exception:
+
+                            winner_name = (
+                                f"کاربر {user_id}"
+                            )
+
+                        result_text += (
+                            f"🏆 نفر {index}: "
+                            f"{winner_name}\n"
+                            f"🎁 جایزه: "
+                            f"{winner_info['prize']}\n\n"
+                        )
+
+                    result_text += (
+                        "❤️ ممنون که در قرعه‌کشی شرکت کردی.\n"
+                        "🍀 قرعه‌کشی بعدی رو از دست نده!"
+                    )
+
+                    try:
+
+                        await bot.send_message(
+                            chat_id=CHANNEL_USERNAME,
+                            text=result_text
+                        )
+
+                    except Exception as e:
+
+                        print(
+                            f"❌ خطا در اعلام نتیجه در کانال: "
+                            f"{e}"
+                        )
+
+                    # -----------------------------------------
+                    # ارسال جایزه برای هر برنده
+                    # -----------------------------------------
+
+                    for winner_info in winner_results:
+
+                        user_id = winner_info["user_id"]
+                        prize_content = winner_info["prize"]
+
+                        try:
+
+                            await bot.send_message(
+                                chat_id=user_id,
+                                text=(
+                                    "🏆🎉 تبریک! 🎉🏆\n\n"
+                                    f"تو برنده قرعه‌کشی شدی:\n"
+                                    f"🎲 {giveaway.title}\n\n"
+                                    f"🎁 جایزه:\n"
+                                    f"{prize_content}\n\n"
+                                    "❤️ مبارکت باشه!"
+                                )
+                            )
+
+                            # پیدا کردن رکورد برنده
+                            winner_result = await session.execute(
+                                select(GiveawayWinner).where(
+                                    GiveawayWinner.giveaway_id
+                                    == giveaway.id,
+                                    GiveawayWinner.user_id
+                                    == user_id
+                                ).order_by(
+                                    GiveawayWinner.id.desc()
+                                )
+                            )
+
+                            winner_record = (
+                                winner_result
+                                .scalars()
+                                .first()
+                            )
+
+                            if winner_record:
+
+                                winner_record.is_sent = True
+                                winner_record.sent_at = datetime.utcnow()
+
+                                await session.commit()
+
+                        except Exception as e:
+
+                            print(
+                                f"⚠️ ارسال جایزه به برنده "
+                                f"{user_id} انجام نشد: {e}"
+                            )
+
+                    print(
+                        f"✅ قرعه‌کشی انجام شد | "
+                        f"giveaway={giveaway.id} | "
+                        f"winners={winner_count}"
+                    )
+
+        except Exception as e:
+
+            print(
+                f"❌ Giveaway scheduler error: {e}"
+            )
+
+        await asyncio.sleep(20)
+
+
+# =========================================================
+# 🚀 اجرای اصلی ربات
+# =========================================================
+
 async def main():
+
     await init_db()
 
     asyncio.create_task(
         auto_lock_matches()
+    )
+
+    asyncio.create_task(
+        auto_draw_giveaways()
     )
 
     print("Bot is running...")
@@ -6795,4 +7114,5 @@ async def main():
 
 
 if __name__ == "__main__":
+
     asyncio.run(main())
