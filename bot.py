@@ -3783,10 +3783,27 @@ async def admin_add_match_message(message: Message):
     pending_match.pop(message.from_user.id, None)
 
     await message.answer(
-        f"✅ بازی با موفقیت اضافه شد.\n\n"
-        f"⚽ {home_team} 🆚 {away_team}\n"
-        f"🆔 شماره بازی: {match.id}\n"
-        f"⏰ {date_text}"
+    f"✅ بازی با موفقیت اضافه شد.\n\n"
+    f"⚽ {home_team} 🆚 {away_team}\n"
+    f"🆔 شماره بازی: {match.id}\n"
+    f"⏰ {date_text}\n\n"
+    f"👇 انتخاب کن:",
+    reply_markup=InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن بازی جدید",
+                    callback_data="admin_add_match"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_prediction"
+                )
+            ]
+        ]
+    )
     )
 @dp.callback_query(F.data == "admin_matches")
 async def admin_matches_callback(callback):
