@@ -617,6 +617,16 @@ async def init_db():
             )
         except Exception:
             pass
+                    # وضعیت انتشار نتیجه بازی
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE matches "
+                    "ADD COLUMN result_published BOOLEAN DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
 
         # ثبت سوپر ادمین‌ها در دیتابیس
         for admin_id in SUPER_ADMIN_IDS:
