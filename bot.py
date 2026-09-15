@@ -1776,6 +1776,258 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_publish_matches")
+async def admin_publish_matches_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+        result = await session.execute(
+            select(Match)
+            .where(Match.is_finished == False)
+            .order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+    if not matches:
+        await callback.message.edit_text(
+            "📢 موردی برای انتخاب وجود ندارد.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="admin_prediction"
+                        )
+                    ]
+                ]
+            )
+        )
+        await callback.answer()
+        return
+
+    pending_publish_selection[callback.from_user.id] = set()
+
+    buttons = []
+
+    for match in matches:
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"☐ {match.home_team} 🆚 {match.away_team}",
+                callback_data=f"publish_select:{match.id}"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="📢 انتشار موارد انتخاب‌شده",
+            callback_data="publish_selected"
+        )
+    ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_prediction"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "📢 انتخاب موارد برای انتشار\n\n"
+        "موارد موردنظر را انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("publish_select:"))
+async def publish_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+
+    if user_id not in pending_publish_selection:
+        pending_publish_selection[user_id] = set()
+
+    match_id = int(callback.data.split(":")[1])
+
+    selected = pending_publish_selection[user_id]
+
+    if match_id in selected:
+        selected.remove(match_id)
+    else:
+        selected.add(match_id)
+
+    async with Session() as session:
+        result = await session.execute(
+            select(Match)
+            .where(Match.is_finished == False)
+            .order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+    buttons = []
+
+    for match in matches:
+
+        if match.id in selected:
+            icon = "☑"
+        else:
+            icon = "☐"
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"{icon} {match.home_team} 🆚 {match.away_team}",
+                callback_data=f"publish_select:{match.id}"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text=f"📢 انتشار موارد انتخاب‌شده ({len(selected)})",
+            callback_data="publish_selected"
+        )
+    ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_prediction"
+        )
+    ])
+
+    await callback.message.edit_reply_markup(
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "publish_selected")
+async def publish_selected_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+    selected = pending_publish_selection.get(user_id, set())
+
+    if not selected:
+        await callback.answer(
+            "⚠️ حداقل یک مورد را انتخاب کن.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match)
+            .where(Match.id.in_(selected))
+            .order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+    if not matches:
+        await callback.answer(
+            "❌ موارد انتخاب‌شده پیدا نشدند.",
+            show_alert=True
+        )
+        return
+
+    post_lines = [
+        "⚽ مسابقات جدید",
+        "",
+    ]
+
+    for match in matches:
+        post_lines.append(
+            f"⚽ {match.home_team} 🆚 {match.away_team}"
+        )
+
+        post_lines.append(
+            f"🆔 بازی شماره {match.id}"
+        )
+
+        post_lines.append(
+            f"⏰ {match.start_time.strftime('%Y-%m-%d %H:%M')}"
+        )
+
+        post_lines.append("")
+
+    post_text = "\n".join(post_lines)
+
+    try:
+        sent_message = await bot.send_message(
+            chat_id=CHANNEL_USERNAME,
+            text=post_text
+        )
+    except Exception as e:
+        await callback.answer(
+            "❌ انتشار انجام نشد.",
+            show_alert=True
+        )
+        print(f"Publish error: {e}")
+        return
+
+    async with Session() as session:
+
+        for match in matches:
+            result = await session.execute(
+                select(Match).where(
+                    Match.id == match.id
+                )
+            )
+
+            db_match = result.scalar_one_or_none()
+
+            if db_match:
+                db_match.is_published = True
+                db_match.channel_message_id = sent_message.message_id
+
+        await session.commit()
+
+    pending_publish_selection.pop(user_id, None)
+
+    await callback.message.edit_text(
+        "✅ انتشار با موفقیت انجام شد.\n\n"
+        f"📢 تعداد موارد منتشرشده: {len(matches)}",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 بازگشت",
+                        callback_data="admin_prediction"
+                    )
+                ]
+            ]
+        )
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_giveaway")
 async def admin_giveaway_callback(callback):
 
