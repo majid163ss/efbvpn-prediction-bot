@@ -1398,6 +1398,12 @@ async def admin_giveaway_callback(callback):
             ],
             [
                 InlineKeyboardButton(
+                    text="📢 انتشار قرعه‌کشی",
+                    callback_data="giveaway_publish"
+               )
+            ],
+            [
+                InlineKeyboardButton(
                     text="👥 شرکت‌کنندگان",
                     callback_data="giveaway_participants"
                 )
