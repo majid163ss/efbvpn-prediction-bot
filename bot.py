@@ -2042,10 +2042,28 @@ async def publish_selected_callback(callback):
 
     post_text = "\n".join(post_lines)
 
+    bot_info = await bot.get_me()
+
+    prediction_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🎯 شرکت در پیش‌بینی",
+                    url=(
+                        f"https://t.me/"
+                        f"{bot_info.username}"
+                        f"?start=predict"
+                    )
+                )
+            ]
+        ]
+    )
+
     try:
         sent_message = await bot.send_message(
             chat_id=CHANNEL_USERNAME,
-            text=post_text
+            text=post_text,
+            reply_markup=prediction_keyboard
         )
     except Exception as e:
         await callback.answer(
