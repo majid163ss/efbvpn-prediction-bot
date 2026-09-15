@@ -4181,7 +4181,7 @@ async def giveaway_message_handler(message: Message):
 
         return
 
-    # مرحله ۴: کدهای جایزه
+        # مرحله ۴: کدهای جایزه
     if pending.get("step") == "codes":
 
         codes = [
@@ -4203,11 +4203,12 @@ async def giveaway_message_handler(message: Message):
         pending["step"] = "post_text"
 
         await message.answer(
-            "⏰ حالا تاریخ و ساعت پایان قرعه‌کشی رو وارد کن.\n\n"
-            "فرمت:\n"
-            "YYYY-MM-DD HH:MM\n\n"
+            "📝 حالا متن پست قرعه‌کشی رو وارد کن.\n\n"
+            "🔥 هر متنی که اینجا بنویسی، همون متن در کانال منتشر میشه.\n\n"
             "مثلاً:\n"
-            "2026-09-20 21:00"
+            "🔥 قرعه‌کشی ویژه شروع شد!\n"
+            "🎁 جایزه: اشتراک ماهانه VPN\n"
+            "🏆 فقط ۳ نفر برنده میشن!"
         )
 
         return
