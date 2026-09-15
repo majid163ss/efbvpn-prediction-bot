@@ -1149,6 +1149,7 @@ async def start_handler(message: Message):
         REQUIRED_GROUP
     )
 
+    # بررسی عضویت اجباری
     if not channel_member or not group_member:
 
         keyboard = InlineKeyboardMarkup(
@@ -1184,22 +1185,148 @@ async def start_handler(message: Message):
 
         return
 
-    # بررسی لینک مستقیم یک بازی
+    # دریافت پارامتر لینک مستقیم
     start_param = None
 
     if message.text:
-        parts = message.text.split(maxsplit=1)
+
+        parts = message.text.split(
+            maxsplit=1
+        )
 
         if len(parts) == 2:
             start_param = parts[1].strip()
 
+    # ==================================================
+    # 🎲 ورود مستقیم به قرعه‌کشی
+    # ==================================================
+
+    if start_param and start_param.startswith("giveaway_"):
+
+        try:
+
+            giveaway_id = int(
+                start_param.replace(
+                    "giveaway_",
+                    "",
+                    1
+                )
+            )
+
+        except ValueError:
+
+            giveaway_id = None
+
+        if giveaway_id is not None:
+
+            async with Session() as session:
+
+                # ساخت / دریافت کاربر
+                await get_user(
+                    session,
+                    message
+                )
+
+                result = await session.execute(
+                    select(Giveaway).where(
+                        Giveaway.id == giveaway_id
+                    )
+                )
+
+                giveaway = (
+                    result.scalar_one_or_none()
+                )
+
+                if not giveaway:
+
+                    await message.answer(
+                        "❌ این قرعه‌کشی پیدا نشد."
+                    )
+
+                    return
+
+                now = datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None)
+
+                # بررسی وضعیت قرعه‌کشی
+                if (
+                    not giveaway.is_active
+                    or giveaway.is_drawn
+                    or giveaway.end_time <= now
+                ):
+
+                    await message.answer(
+                        "⏰ مهلت شرکت در این قرعه‌کشی "
+                        "به پایان رسیده."
+                    )
+
+                    return
+
+                # بررسی شرکت قبلی
+                participant_result = await session.execute(
+                    select(GiveawayParticipant).where(
+                        GiveawayParticipant.giveaway_id
+                        == giveaway.id,
+                        GiveawayParticipant.user_id
+                        == message.from_user.id
+                    )
+                )
+
+                participant = (
+                    participant_result
+                    .scalar_one_or_none()
+                )
+
+                if participant:
+
+                    await message.answer(
+                        "✅ تو قبلاً در این قرعه‌کشی شرکت کردی!\n\n"
+                        f"🎲 {giveaway.title}\n"
+                        f"🎁 جایزه: {giveaway.prize}\n\n"
+                        "🍀 برات آرزوی موفقیت دارم!"
+                    )
+
+                    return
+
+                # ثبت شرکت کاربر
+                participant = GiveawayParticipant(
+                    giveaway_id=giveaway.id,
+                    user_id=message.from_user.id
+                )
+
+                session.add(participant)
+
+                await session.commit()
+
+                await message.answer(
+                    "🎉 با موفقیت در قرعه‌کشی شرکت کردی!\n\n"
+                    f"🎲 {giveaway.title}\n"
+                    f"🎁 جایزه: {giveaway.prize}\n"
+                    f"🏆 تعداد برنده: {giveaway.winner_count}\n\n"
+                    "🍀 امیدوارم برنده باشی!"
+                )
+
+                return
+
+    # ==================================================
+    # ⚽ ورود مستقیم به یک بازی
+    # ==================================================
+
     if start_param and start_param.startswith("match_"):
 
         try:
+
             match_id = int(
-                start_param.replace("match_", "", 1)
+                start_param.replace(
+                    "match_",
+                    "",
+                    1
+                )
             )
+
         except ValueError:
+
             match_id = None
 
         if match_id is not None:
@@ -1212,13 +1339,16 @@ async def start_handler(message: Message):
                     )
                 )
 
-                match = result.scalar_one_or_none()
+                match = (
+                    result.scalar_one_or_none()
+                )
 
             if not match:
 
                 await message.answer(
                     "❌ این بازی پیدا نشد."
                 )
+
                 return
 
             locked = (
@@ -1226,7 +1356,8 @@ async def start_handler(message: Message):
                 or match.is_finished
                 or datetime.now(
                     IRAN_TIMEZONE
-                ).replace(tzinfo=None) >= match.start_time
+                ).replace(tzinfo=None)
+                >= match.start_time
             )
 
             if locked:
@@ -1234,6 +1365,7 @@ async def start_handler(message: Message):
                 await message.answer(
                     "🔒 زمان پیش‌بینی این بازی تمام شده."
                 )
+
                 return
 
             pending_match[
@@ -1242,7 +1374,8 @@ async def start_handler(message: Message):
 
             await message.answer(
                 f"🎯 پیش‌بینی بازی:\n\n"
-                f"⚽ {match.home_team} 🆚 {match.away_team}\n\n"
+                f"⚽ {match.home_team} 🆚 "
+                f"{match.away_team}\n\n"
                 f"نتیجه رو به این شکل بفرست:\n"
                 f"مثلاً:\n"
                 f"2-1"
@@ -1250,7 +1383,10 @@ async def start_handler(message: Message):
 
             return
 
-    # ورود معمولی به ربات
+    # ==================================================
+    # 🏠 ورود معمولی به ربات
+    # ==================================================
+
     async with Session() as session:
 
         await get_user(
@@ -1265,7 +1401,8 @@ async def start_handler(message: Message):
     )
 
     await message.answer(
-        "☰ برای باز کردن منوی اصلی، از دکمه پایین استفاده کن.",
+        "☰ برای باز کردن منوی اصلی، "
+        "از دکمه پایین استفاده کن.",
         reply_markup=persistent_menu()
     )
 
