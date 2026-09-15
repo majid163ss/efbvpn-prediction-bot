@@ -548,6 +548,16 @@ async def init_db():
             )
         except Exception:
             pass
+
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE giveaways "
+                    "ADD COLUMN post_text VARCHAR(10000)"
+                )
+            )
+        except Exception:
+            pass
         # ستون‌های جدید سیستم امتیازات
         try:
             await conn.execute(
