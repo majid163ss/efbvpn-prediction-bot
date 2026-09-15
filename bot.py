@@ -5301,7 +5301,7 @@ async def giveaway_message_handler(message: Message):
         return
 
         # مرحله ۴: کدهای جایزه
-    if pending.get("step") == "codes":
+       if pending.get("step") == "codes":
 
     # هر جایزه با --- از جایزه بعدی جدا می‌شود
     prize_blocks = [
