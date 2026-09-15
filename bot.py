@@ -7504,15 +7504,19 @@ async def auto_draw_giveaways():
                     if giveaway.prize_codes:
 
                         prize_codes = [
-                            line.strip()
-                            for line in giveaway.prize_codes.splitlines()
-                            if line.strip()
+                            block.strip()
+                            for block in giveaway.prize_codes.split(
+                                "\n---\n"
+                            )
+                            if block.strip()
                         ]
 
-                    # اگر کد کافی نبود، خود جایزه استفاده می‌شود
+                    # اگر جایزه کافی نبود،
+                    # خود جایزه عمومی استفاده می‌شود
                     if len(prize_codes) < winner_count:
 
                         while len(prize_codes) < winner_count:
+
                             prize_codes.append(
                                 giveaway.prize
                             )
