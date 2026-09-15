@@ -7610,8 +7610,7 @@ async def auto_draw_giveaways():
                         result_text += (
                             f"🏆 نفر {index}: "
                             f"{winner_name}\n"
-                            f"🎁 جایزه: "
-                            f"{winner_info['prize']}\n\n"
+                            "🎁 جایزه برای برنده ارسال شد.\n\n"
                         )
 
                     result_text += (
