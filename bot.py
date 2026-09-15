@@ -1372,8 +1372,8 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
-@dp.callback_query(F.data == "admin_giveaway")
-async def admin_giveaway_callback(callback):
+@dp.callback_query(F.data == "giveaway_publish")
+async def giveaway_publish_callback(callback):
 
     if not is_admin(callback.from_user.id):
         await callback.answer(
@@ -1382,56 +1382,52 @@ async def admin_giveaway_callback(callback):
         )
         return
 
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway)
+            .where(
+                Giveaway.is_active == True,
+                Giveaway.is_drawn == False
+            )
+            .order_by(
+                Giveaway.id.desc()
+            )
+        )
+
+        giveaway = result.scalars().first()
+
+    if not giveaway:
+
+        await callback.answer(
+            "❌ قرعه‌کشی فعالی برای انتشار وجود نداره.",
+            show_alert=True
+        )
+        return
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="➕ ایجاد قرعه‌کشی",
-                    callback_data="giveaway_create"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🎁 قرعه‌کشی‌های فعال",
-                    callback_data="giveaway_active"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📢 انتشار قرعه‌کشی",
-                    callback_data="giveaway_publish"
-               )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="👥 شرکت‌کنندگان",
-                    callback_data="giveaway_participants"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🏆 نتایج و برندگان",
-                    callback_data="giveaway_winners"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📜 تاریخچه",
-                    callback_data="giveaway_history"
+                    text="📢 انتشار در کانال",
+                    callback_data=f"publish_giveaway:{giveaway.id}"
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="🔙 بازگشت",
-                    callback_data="admin_panel"
+                    callback_data="admin_giveaway"
                 )
             ]
         ]
     )
 
     await callback.message.edit_text(
-        "🎲 مدیریت قرعه‌کشی\n\n"
-        "یکی از گزینه‌ها رو انتخاب کن:",
+        "🎲 قرعه‌کشی آماده انتشار:\n\n"
+        f"🎁 {giveaway.title}\n"
+        f"🏆 جایزه: {giveaway.prize}\n"
+        f"👥 تعداد برنده: {giveaway.winner_count}\n\n"
+        "برای انتشار در کانال روی دکمه زیر بزن:",
         reply_markup=keyboard
     )
 
