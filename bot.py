@@ -5416,122 +5416,76 @@ async def prediction_handler(message: Message):
             )
 
         # =========================
-        # 📢 ساخت پیام نتیجه کانال
+        # 🏁 نتیجه ثبت شد
         # =========================
 
-        special_text = (
-            "\n🎯 این بازی ویژه بود و امتیازها ×۲ محاسبه شد."
-            if match.is_special
-            else ""
+        pending_match.pop(
+            user_id,
+            None
         )
 
-        channel_text = (
-            "🏁 <b>نتیجه نهایی</b>\n\n"
-            f"⚽ <b>{match.home_team}</b> "
+        async with Session() as session:
+
+            result = await session.execute(
+                select(Match)
+                .where(
+                    Match.is_finished == False
+                )
+                .order_by(
+                    Match.start_time
+                )
+            )
+
+            remaining_matches = (
+                result.scalars().all()
+            )
+
+        buttons = []
+
+        for remaining_match in remaining_matches:
+
+            buttons.append([
+                InlineKeyboardButton(
+                    text=(
+                        f"⚽ "
+                        f"{remaining_match.home_team} "
+                        f"🆚 "
+                        f"{remaining_match.away_team}"
+                    ),
+                    callback_data=(
+                        f"result_match:"
+                        f"{remaining_match.id}"
+                    )
+                )
+            ])
+
+        buttons.append([
+            InlineKeyboardButton(
+                text="📢 انتشار نتایج",
+                callback_data="admin_publish_results"
+            )
+        ])
+
+        buttons.append([
+            InlineKeyboardButton(
+                text="🔙 بازگشت",
+                callback_data="admin_prediction"
+            )
+        ])
+
+        await message.answer(
+            f"✅ نتیجه با موفقیت ثبت شد!\n\n"
+            f"⚽ {match.home_team} "
             f"{home_score} - {away_score} "
-            f"<b>{match.away_team}</b>\n"
-            f"{special_text}\n\n"
-            "━━━━━━━━━━━━━━\n\n"
-            "🏅 <b>برترین‌های این بازی</b>\n\n"
+            f"{match.away_team}\n\n"
+            "📢 نتیجه هنوز در کانال منتشر نشده.\n\n"
+            "🏁 بازی‌های باقی‌مانده برای ثبت نتیجه:",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=buttons
+            )
         )
 
-        if game_winners:
-
-            medals = ["🥇", "🥈", "🥉"]
-
-            for index, (
-                user,
-                prediction,
-                points
-            ) in enumerate(
-                game_winners[:3]
-            ):
-
-                name = (
-                    f"@{user.username}"
-                    if user.username
-                    else user.first_name
-                    or "کاربر"
-                )
-
-                medal = medals[index]
-
-                channel_text += (
-                    f"{medal} {name} — "
-                    f"<b>{points} امتیاز</b>\n"
-                    f"   🎯 پیش‌بینی: "
-                    f"{prediction.home_pred}-"
-                    f"{prediction.away_pred}\n"
-                )
-
-        else:
-
-            channel_text += (
-                "❌ کسی برای این بازی پیش‌بینی ثبت نکرده.\n"
-            )
-
-        channel_text += (
-            "\n━━━━━━━━━━━━━━\n\n"
-            "🏆 <b>جدول امتیازات</b>\n\n"
-        )
-
-        if leaderboard_users:
-
-            rank_icons = [
-                "🥇",
-                "🥈",
-                "🥉",
-                "4️⃣",
-                "5️⃣"
-            ]
-
-            for index, user in enumerate(
-                leaderboard_users
-            ):
-
-                name = (
-                    f"@{user.username}"
-                    if user.username
-                    else user.first_name
-                    or "کاربر"
-                )
-
-                channel_text += (
-                    f"{rank_icons[index]} "
-                    f"{name} — "
-                    f"<b>{user.total_points} امتیاز</b>\n"
-                )
-
-        else:
-
-            channel_text += (
-                "هنوز جدول امتیازات تشکیل نشده.\n"
-            )
-
-        channel_text += (
-            "\n━━━━━━━━━━━━━━\n"
-            "🎯 برای شرکت در پیش‌بینی‌های بعدی، "
-            "بازی‌های کانال را دنبال کنید."
-        )
-
-        # =========================
-        # 📢 ارسال نتیجه به کانال
-        # =========================
-
-        try:
-
-            await bot.send_message(
-                CHANNEL_USERNAME,
-                channel_text,
-                parse_mode="HTML"
-            )
-
-        except Exception as e:
-
-            print(
-                "❌ خطا در ارسال نتیجه به کانال:",
-                e
-            )
+        return
 
         # =========================
         # پایان ثبت نتیجه برای ادمین
