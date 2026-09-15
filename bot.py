@@ -639,6 +639,15 @@ async def init_db():
     )
     except Exception:
        pass
+     try:
+         await conn.execute(
+             text(
+             "ALTER TABLE matches "
+             "ADD COLUMN channel_message_id INTEGER"
+         )
+    )
+     except Exception:
+        pass
 
 
 async def get_user(
