@@ -525,7 +525,8 @@ class GiveawayWinner(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-                # migration سیستم قرعه‌کشی
+
+        # migration سیستم قرعه‌کشی
         try:
             await conn.execute(
                 text(
@@ -565,6 +566,7 @@ async def init_db():
             )
         except Exception:
             pass
+
         # ستون‌های جدید سیستم امتیازات
         try:
             await conn.execute(
@@ -615,11 +617,13 @@ async def init_db():
             )
         except Exception:
             pass
+
         # ثبت سوپر ادمین‌ها در دیتابیس
         for admin_id in SUPER_ADMIN_IDS:
             await conn.execute(
                 text(
-                    "INSERT OR IGNORE INTO admins (telegram_id) VALUES (:telegram_id)"
+                    "INSERT OR IGNORE INTO admins (telegram_id) "
+                    "VALUES (:telegram_id)"
                 ),
                 {"telegram_id": admin_id}
             )
@@ -633,24 +637,28 @@ async def init_db():
             )
         except Exception:
             pass
-    try:
-        await conn.execute(
-            text(
-            "ALTER TABLE matches "
-            "ADD COLUMN is_published BOOLEAN DEFAULT 0"
-        )
-    )
-    except Exception:
-       pass
-     try:
-         await conn.execute(
-             text(
-             "ALTER TABLE matches "
-             "ADD COLUMN channel_message_id INTEGER"
-         )
-    )
-     except Exception:
-        pass
+
+        # ستون انتشار بازی‌ها
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE matches "
+                    "ADD COLUMN is_published BOOLEAN DEFAULT 0"
+                )
+            )
+        except Exception:
+            pass
+
+        # شناسه پیام بازی‌های منتشرشده در کانال
+        try:
+            await conn.execute(
+                text(
+                    "ALTER TABLE matches "
+                    "ADD COLUMN channel_message_id INTEGER"
+                )
+            )
+        except Exception:
+            pass
 
 
 async def get_user(
