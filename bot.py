@@ -1696,14 +1696,8 @@ async def admin_panel_callback(callback):
     keyboard_buttons = [
         [
             InlineKeyboardButton(
-                text="➕ افزودن بازی",
-                callback_data="admin_add_match"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="📢 انتشار بازی‌ها در کانال",
-                callback_data="admin_publish_matches"
+                text="🎯 مدیریت پیش‌بینی",
+                callback_data="admin_prediction"
             )
         ],
         [
@@ -1716,24 +1710,6 @@ async def admin_panel_callback(callback):
             InlineKeyboardButton(
                 text="🎮 مدیریت eFootball",
                 callback_data="admin_efootball"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="📋 مدیریت بازی‌ها",
-                callback_data="admin_matches"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="🏁 ثبت نتیجه",
-                callback_data="admin_result"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="👥 آمار کاربران",
-                callback_data="admin_stats"
             )
         ],
         [
@@ -1840,6 +1816,64 @@ async def admin_giveaway_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_prediction")
+async def admin_prediction_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📢 انتشار بازی‌ها",
+                    callback_data="admin_publish_matches"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن بازی",
+                    callback_data="admin_add_match"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 مدیریت بازی‌ها",
+                    callback_data="admin_matches"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏁 ثبت نتیجه",
+                    callback_data="admin_result"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👥 آمار کاربران",
+                    callback_data="admin_stats"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "🎯 مدیریت پیش‌بینی\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer() 
 @dp.callback_query(F.data == "giveaway_publish")
 async def giveaway_publish_callback(callback):
 
