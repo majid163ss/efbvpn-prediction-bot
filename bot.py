@@ -3756,8 +3756,6 @@ async def admin_publish_results_callback(callback):
         )
         return
 
-    pending_result_selection = {}
-
     buttons = []
 
     for match in matches:
@@ -3791,6 +3789,96 @@ async def admin_publish_results_callback(callback):
     await callback.message.edit_text(
         "📢 انتخاب نتایج برای انتشار\n\n"
         "نتایجی که می‌خواهی در کانال منتشر شوند را انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
+@dp.callback_query(F.data.startswith("publish_result_select:"))
+async def publish_result_select_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+
+    if user_id not in pending_result_selection:
+        pending_result_selection[user_id] = set()
+
+    match_id = int(
+        callback.data.split(":")[1]
+    )
+
+    selected = pending_result_selection[user_id]
+
+    if match_id in selected:
+        selected.remove(match_id)
+    else:
+        selected.add(match_id)
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match)
+            .where(
+                Match.is_finished == True,
+                Match.result_published == False
+            )
+            .order_by(
+                Match.start_time
+            )
+        )
+
+        matches = result.scalars().all()
+
+    buttons = []
+
+    for match in matches:
+
+        icon = (
+            "☑"
+            if match.id in selected
+            else "☐"
+        )
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=(
+                    f"{icon} "
+                    f"{match.home_team} "
+                    f"{match.home_score} - "
+                    f"{match.away_score} "
+                    f"{match.away_team}"
+                ),
+                callback_data=(
+                    f"publish_result_select:{match.id}"
+                )
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text=(
+                f"📢 انتشار نتایج انتخاب‌شده "
+                f"({len(selected)})"
+            ),
+            callback_data="publish_results_selected"
+        )
+    ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_prediction"
+        )
+    ])
+
+    await callback.message.edit_reply_markup(
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=buttons
         )
