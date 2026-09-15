@@ -5581,9 +5581,13 @@ async def prediction_handler(message: Message):
             f"⚽ {match.home_team} "
             f"{home_score} - {away_score} "
             f"{match.away_team}\n\n"
-            f"🏆 امتیازها بعد از پایان بازی محاسبه میشن.",
-            reply_markup=main_menu()
-        )
+            f"🏆 امتیازها بعد از پایان بازی محاسبه میشن."
+       )
+
+       await show_matches(
+           message,
+           user_id
+      )
 @dp.message(F.text)
 async def giveaway_message_handler(message: Message):
 
