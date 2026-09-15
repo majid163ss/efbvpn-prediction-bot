@@ -5272,75 +5272,90 @@ async def giveaway_message_handler(message: Message):
     if pending.get("step") == "winner_count":
 
         try:
+
             winner_count = int(text)
+
         except ValueError:
+
             await message.answer(
                 "❌ لطفاً فقط عدد وارد کن.\n"
                 "مثلاً: 3"
             )
+
             return
 
         if winner_count < 1 or winner_count > 100:
+
             await message.answer(
                 "❌ تعداد برنده باید بین 1 تا 100 باشه."
             )
+
             return
 
         pending["winner_count"] = winner_count
         pending["step"] = "codes"
 
         await message.answer(
-            "🎟 حالا کد یا جایزه اختصاصی برنده‌ها رو وارد کن.\n\n"
-            "اگر چند برنده داری، هر کد رو در یک خط بنویس.\n\n"
-            "مثلاً:\n"
-            "CODE-001\n"
-            "CODE-002\n"
-            "CODE-003"
+            "🎁 حالا متن کامل جایزه هر برنده رو وارد کن.\n\n"
+            "هر جایزه می‌تونه چند خط داشته باشه.\n\n"
+            "برای جدا کردن جایزه‌ها از هم، "
+            "یک خط شامل --- قرار بده.\n\n"
+            "مثال:\n\n"
+            "لینک دانلود اندروید\n"
+            "لینک دانلود آیفون\n"
+            "نام کاربری: cccc\n"
+            "رمز عبور: cccc\n"
+            "هر اکانت ظرفیت ۳ نفر دارد\n\n"
+            "---\n\n"
+            "لینک دانلود اندروید\n"
+            "لینک دانلود آیفون\n"
+            "نام کاربری: dddd\n"
+            "رمز عبور: dddd\n"
+            "هر اکانت ظرفیت ۳ نفر دارد"
         )
 
         return
 
-        # مرحله ۴: کدهای جایزه
-       if pending.get("step") == "codes":
+    # مرحله ۴: متن جایزه‌ها
+    if pending.get("step") == "codes":
 
-    # هر جایزه با --- از جایزه بعدی جدا می‌شود
-    prize_blocks = [
-        block.strip()
-        for block in text.split("\n---\n")
-        if block.strip()
-    ]
+        prize_blocks = [
+            block.strip()
+            for block in text.split("\n---\n")
+            if block.strip()
+        ]
 
-    winner_count = pending.get(
-        "winner_count",
-        1
-    )
+        winner_count = pending.get(
+            "winner_count",
+            1
+        )
 
-    if len(prize_blocks) != winner_count:
+        if len(prize_blocks) != winner_count:
+
+            await message.answer(
+                f"❌ تعداد جایزه‌ها با تعداد برنده‌ها یکی نیست.\n\n"
+                f"👥 تعداد برنده‌ها: {winner_count}\n"
+                f"🎁 تعداد جایزه‌های واردشده: "
+                f"{len(prize_blocks)}\n\n"
+                "برای جدا کردن هر جایزه، "
+                "یک خط شامل --- بین آن‌ها قرار بده."
+            )
+
+            return
+
+        pending["prize_codes"] = prize_blocks
+        pending["step"] = "post_text"
 
         await message.answer(
-            f"❌ تعداد جایزه‌ها با تعداد برنده‌ها یکی نیست.\n\n"
-            f"👥 تعداد برنده‌ها: {winner_count}\n"
-            f"🎁 تعداد جایزه‌های واردشده: "
-            f"{len(prize_blocks)}\n\n"
-            "برای جدا کردن هر جایزه، "
-            "یک خط شامل --- بین آن‌ها قرار بده."
+            "✅ جایزه‌ها ثبت شدند.\n\n"
+            "🔒 اطلاعات جایزه فقط برای برنده ارسال میشه "
+            "و در کانال نمایش داده نمیشه.\n\n"
+            "📝 حالا متن پست قرعه‌کشی رو وارد کن."
         )
 
         return
 
-    pending["prize_codes"] = prize_blocks
-    pending["step"] = "post_text"
-
-    await message.answer(
-        "✅ جایزه‌ها ثبت شدند.\n\n"
-        "🔒 اطلاعات جایزه فقط برای برنده ارسال میشه "
-        "و در کانال نمایش داده نمیشه.\n\n"
-        "📝 حالا متن پست قرعه‌کشی رو وارد کن."
-    )
-
-    return
-
-        # مرحله ۵: متن پست قرعه‌کشی
+    # مرحله ۵: متن پست کانال
     if pending.get("step") == "post_text":
 
         pending["post_text"] = text
@@ -5356,15 +5371,16 @@ async def giveaway_message_handler(message: Message):
 
         return
 
-
     # مرحله ۶: زمان پایان
     if pending.get("step") == "end_time":
 
         try:
+
             end_time = datetime.strptime(
                 text,
                 "%Y-%m-%d %H:%M"
             )
+
         except ValueError:
 
             await message.answer(
@@ -5386,6 +5402,77 @@ async def giveaway_message_handler(message: Message):
             )
 
             return
+
+        title = pending.get("title")
+        prize = pending.get("prize")
+        winner_count = pending.get("winner_count")
+        prize_codes = pending.get(
+            "prize_codes",
+            []
+        )
+        post_text = pending.get("post_text")
+
+        if (
+            not title
+            or not prize
+            or not post_text
+            or len(prize_codes) != winner_count
+        ):
+
+            pending_giveaway.pop(
+                user_id,
+                None
+            )
+
+            await message.answer(
+                "❌ اطلاعات قرعه‌کشی ناقص بود.\n"
+                "دوباره شروع کن."
+            )
+
+            return
+
+        async with Session() as session:
+
+            giveaway = Giveaway(
+                title=title,
+                prize=prize,
+                prize_codes="\n---\n".join(
+                    prize_codes
+                ),
+                end_time=end_time,
+                winner_count=winner_count,
+                channel_message_id=None,
+                is_active=True,
+                is_drawn=False,
+                is_announced=False,
+                post_text=post_text
+            )
+
+            session.add(giveaway)
+
+            await session.commit()
+
+            giveaway_id = giveaway.id
+
+        pending_giveaway.pop(
+            user_id,
+            None
+        )
+
+        await message.answer(
+            "✅ قرعه‌کشی با موفقیت ساخته شد! 🎉\n\n"
+            f"🎲 عنوان: {title}\n"
+            f"🎁 جایزه: {prize}\n"
+            f"👥 تعداد برنده: {winner_count}\n"
+            f"🎟 تعداد جایزه‌های اختصاصی: "
+            f"{len(prize_codes)}\n"
+            f"⏰ پایان: {text}\n\n"
+            "🔒 جایزه‌های اختصاصی فقط خصوصی "
+            "برای برنده‌ها ارسال میشن.\n\n"
+            "📢 آماده انتشار در کانال است."
+        )
+
+        return
 
         title = pending.get("title")
         prize = pending.get("prize")
