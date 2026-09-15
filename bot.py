@@ -4338,8 +4338,8 @@ async def matches_callback(callback):
    # await callback.message.delete()
 
     await show_matches(
-        callback.message
-        callback.from_user.id
+    callback.message,
+    callback.from_user.id
     )
 
     await callback.answer()
