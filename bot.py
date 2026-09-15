@@ -1458,6 +1458,24 @@ async def start_handler(message: Message):
 
         if len(parts) == 2:
             start_param = parts[1].strip()
+    # ==================================================
+    # 🎯 ورود مستقیم به بخش پیش‌بینی
+    # ==================================================
+
+    if start_param == "predict":
+
+        async with Session() as session:
+            await get_user(
+                session,
+                message
+            )
+
+        await show_matches(
+            message,
+            message.from_user.id
+        )
+
+        return
 
     # ==================================================
     # 🎲 ورود مستقیم به قرعه‌کشی
