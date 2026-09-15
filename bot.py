@@ -1113,11 +1113,24 @@ async def is_member(bot, user_id, chat_username):
             f"status={member.status}"
         )
 
-        return member.status in {
+        # کاربر عضو عادی، ادمین یا مالک است
+        if member.status in {
             ChatMemberStatus.MEMBER,
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.CREATOR
-        }
+        }:
+            return True
+
+        # کاربر عضو گروه است ولی دسترسی‌هایش محدود شده
+        if member.status == ChatMemberStatus.RESTRICTED:
+
+            return getattr(
+                member,
+                "is_member",
+                False
+            )
+
+        return False
 
     except Exception as e:
 
