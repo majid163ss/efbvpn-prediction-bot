@@ -1509,6 +1509,70 @@ async def admin_panel_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_giveaway")
+async def admin_giveaway_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ ایجاد قرعه‌کشی",
+                    callback_data="giveaway_create"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📢 انتشار قرعه‌کشی",
+                    callback_data="giveaway_publish"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎁 قرعه‌کشی‌های فعال",
+                    callback_data="giveaway_active"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="👥 شرکت‌کنندگان",
+                    callback_data="giveaway_participants"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏆 نتایج و برندگان",
+                    callback_data="giveaway_winners"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📜 تاریخچه",
+                    callback_data="giveaway_history"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "🎲 مدیریت قرعه‌کشی\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "giveaway_publish")
 async def giveaway_publish_callback(callback):
 
