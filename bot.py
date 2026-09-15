@@ -3885,6 +3885,211 @@ async def publish_result_select_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "publish_results_selected")
+async def publish_results_selected_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    user_id = callback.from_user.id
+    selected = pending_result_selection.get(
+        user_id,
+        set()
+    )
+
+    if not selected:
+        await callback.answer(
+            "⚠️ حداقل یک نتیجه را انتخاب کن.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match)
+            .where(
+                Match.id.in_(selected),
+                Match.is_finished == True,
+                Match.result_published == False
+            )
+            .order_by(Match.start_time)
+        )
+
+        matches = result.scalars().all()
+
+        if not matches:
+            await callback.answer(
+                "❌ نتیجه‌ای برای انتشار پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        # ساخت متن نتایج
+        channel_text = (
+            "🏁 <b>نتایج نهایی مسابقات</b>\n\n"
+        )
+
+        for match in matches:
+
+            channel_text += (
+                "━━━━━━━━━━━━━━\n\n"
+                f"⚽ <b>{match.home_team}</b> "
+                f"{match.home_score} - "
+                f"{match.away_score} "
+                f"<b>{match.away_team}</b>\n\n"
+            )
+
+            # برترین‌های همان بازی
+            prediction_result = await session.execute(
+                select(Prediction).where(
+                    Prediction.match_id == match.id
+                )
+            )
+
+            predictions = (
+                prediction_result.scalars().all()
+            )
+
+            game_winners = []
+
+            for prediction in predictions:
+
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == prediction.user_id
+                    )
+                )
+
+                user = (
+                    user_result.scalar_one_or_none()
+                )
+
+                if user:
+                    game_winners.append(
+                        (
+                            user,
+                            prediction,
+                            prediction.points
+                        )
+                    )
+
+            game_winners.sort(
+                key=lambda x: x[2],
+                reverse=True
+            )
+
+            if game_winners:
+
+                channel_text += (
+                    "🏅 <b>برترین‌های این بازی</b>\n\n"
+                )
+
+                medals = [
+                    "🥇",
+                    "🥈",
+                    "🥉"
+                ]
+
+                for index, (
+                    user,
+                    prediction,
+                    points
+                ) in enumerate(
+                    game_winners[:3]
+                ):
+
+                    name = (
+                        f"@{user.username}"
+                        if user.username
+                        else user.first_name
+                        or "کاربر"
+                    )
+
+                    channel_text += (
+                        f"{medals[index]} {name} — "
+                        f"<b>{points} امتیاز</b>\n"
+                        f"   🎯 پیش‌بینی: "
+                        f"{prediction.home_pred}-"
+                        f"{prediction.away_pred}\n"
+                    )
+
+                channel_text += "\n"
+
+        channel_text += (
+            "━━━━━━━━━━━━━━\n"
+            "🎯 برای شرکت در پیش‌بینی‌های بعدی، "
+            "بازی‌های کانال را دنبال کنید."
+        )
+
+    try:
+
+        await bot.send_message(
+            CHANNEL_USERNAME,
+            channel_text,
+            parse_mode="HTML"
+        )
+
+    except Exception as e:
+
+        print(
+            "❌ خطا در ارسال نتایج:",
+            e
+        )
+
+        await callback.answer(
+            "❌ ارسال به کانال انجام نشد.",
+            show_alert=True
+        )
+
+        return
+
+    # علامت‌گذاری نتایج منتشرشده
+    async with Session() as session:
+
+        for match in matches:
+
+            result = await session.execute(
+                select(Match).where(
+                    Match.id == match.id
+                )
+            )
+
+            db_match = (
+                result.scalar_one_or_none()
+            )
+
+            if db_match:
+                db_match.result_published = True
+
+        await session.commit()
+
+    pending_result_selection.pop(
+        user_id,
+        None
+    )
+
+    await callback.message.edit_text(
+        "✅ نتایج با موفقیت منتشر شدند.\n\n"
+        f"📢 تعداد نتایج منتشرشده: "
+        f"{len(matches)}",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 بازگشت",
+                        callback_data="admin_prediction"
+                    )
+                ]
+            ]
+        )
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_add_match")
 async def admin_add_match_callback(callback):
 
