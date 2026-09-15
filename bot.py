@@ -5303,34 +5303,42 @@ async def giveaway_message_handler(message: Message):
         # مرحله ۴: کدهای جایزه
     if pending.get("step") == "codes":
 
-        codes = [
-            line.strip()
-            for line in text.splitlines()
-            if line.strip()
-        ]
+    # هر جایزه با --- از جایزه بعدی جدا می‌شود
+    prize_blocks = [
+        block.strip()
+        for block in text.split("\n---\n")
+        if block.strip()
+    ]
 
-        winner_count = pending.get("winner_count", 1)
+    winner_count = pending.get(
+        "winner_count",
+        1
+    )
 
-        if len(codes) < winner_count:
-            await message.answer(
-                f"❌ برای {winner_count} برنده، "
-                f"حداقل {winner_count} کد یا جایزه وارد کن."
-            )
-            return
-
-        pending["prize_codes"] = codes
-        pending["step"] = "post_text"
+    if len(prize_blocks) != winner_count:
 
         await message.answer(
-            "📝 حالا متن پست قرعه‌کشی رو وارد کن.\n\n"
-            "🔥 هر متنی که اینجا بنویسی، همون متن در کانال منتشر میشه.\n\n"
-            "مثلاً:\n"
-            "🔥 قرعه‌کشی ویژه شروع شد!\n"
-            "🎁 جایزه: اشتراک ماهانه VPN\n"
-            "🏆 فقط ۳ نفر برنده میشن!"
+            f"❌ تعداد جایزه‌ها با تعداد برنده‌ها یکی نیست.\n\n"
+            f"👥 تعداد برنده‌ها: {winner_count}\n"
+            f"🎁 تعداد جایزه‌های واردشده: "
+            f"{len(prize_blocks)}\n\n"
+            "برای جدا کردن هر جایزه، "
+            "یک خط شامل --- بین آن‌ها قرار بده."
         )
 
         return
+
+    pending["prize_codes"] = prize_blocks
+    pending["step"] = "post_text"
+
+    await message.answer(
+        "✅ جایزه‌ها ثبت شدند.\n\n"
+        "🔒 اطلاعات جایزه فقط برای برنده ارسال میشه "
+        "و در کانال نمایش داده نمیشه.\n\n"
+        "📝 حالا متن پست قرعه‌کشی رو وارد کن."
+    )
+
+    return
 
         # مرحله ۵: متن پست قرعه‌کشی
     if pending.get("step") == "post_text":
