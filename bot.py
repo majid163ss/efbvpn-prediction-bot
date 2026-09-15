@@ -794,9 +794,41 @@ def get_medal(level):
 # SHOW MATCHES
 # =========================
 
-async def show_matches(message: Message):
+async def show_matches(
+    message: Message,
+    user_id: int | None = None
+):
 
     async with Session() as session:
+
+        if user_id is not None:
+
+            user_result = await session.execute(
+                select(User).where(
+                    User.telegram_id == user_id
+                )
+            )
+
+            user = user_result.scalar_one_or_none()
+
+            if user:
+
+                prediction_result = await session.execute(
+                    select(Prediction.match_id).where(
+                        Prediction.user_id == user.id
+                    )
+                )
+
+                predicted_match_ids = {
+                    row[0]
+                    for row in prediction_result.all()
+                }
+
+            else:
+                predicted_match_ids = set()
+
+        else:
+            predicted_match_ids = set()
 
         result = await session.execute(
             select(Match)
@@ -810,10 +842,17 @@ async def show_matches(message: Message):
 
         matches = result.scalars().all()
 
+        matches = [
+            match
+            for match in matches
+            if match.id not in predicted_match_ids
+        ]
+
         if not matches:
 
             await message.answer(
-                "⚽ فعلاً بازی‌ای برای پیش‌بینی وجود نداره.",
+                "🎉 همه بازی‌های موجود رو پیش‌بینی کردی!\n\n"
+                "🏆 نتیجه‌ها بعد از پایان بازی محاسبه میشن.",
                 reply_markup=main_menu()
             )
 
@@ -825,7 +864,9 @@ async def show_matches(message: Message):
 
             locked = (
                 match.is_locked
-                or datetime.now(IRAN_TIMEZONE).replace(tzinfo=None) >= match.start_time
+                or datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None) >= match.start_time
             )
 
             status = "🔒" if locked else "🎯"
@@ -854,11 +895,13 @@ async def show_matches(message: Message):
         )
 
         await message.answer(
-            "🎯 بازی موردنظر رو انتخاب کن:",
+            "🎯 بازی‌های باقی‌مانده برای پیش‌بینی:\n\n"
+            "یک بازی رو انتخاب کن:",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=buttons
             )
         )
+
 
 
 # =========================
