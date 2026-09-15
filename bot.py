@@ -1274,6 +1274,144 @@ async def start_handler(message: Message):
                 )
 
                 participant = (
+@dp.message(Command("start"))
+async def start_handler(message: Message):
+
+    channel_member = await is_member(
+        bot,
+        message.from_user.id,
+        REQUIRED_CHANNEL
+    )
+
+    group_member = await is_member(
+        bot,
+        message.from_user.id,
+        REQUIRED_GROUP
+    )
+
+    # بررسی عضویت اجباری
+    if not channel_member or not group_member:
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="📢 عضویت در کانال",
+                        url="https://t.me/EFbVpn"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="👥 عضویت در گروه",
+                        url="https://t.me/EFbVpn_Gp"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✅ بررسی عضویت",
+                        callback_data="check_membership"
+                    )
+                ]
+            ]
+        )
+
+        await message.answer(
+            "🔐 برای استفاده از ربات باید در هر دو عضو باشی.\n\n"
+            "1️⃣ وارد کانال شو\n"
+            "2️⃣ وارد گروه شو\n"
+            "3️⃣ سپس روی «✅ بررسی عضویت» بزن",
+            reply_markup=keyboard
+        )
+
+        return
+
+    # دریافت پارامتر لینک مستقیم
+    start_param = None
+
+    if message.text:
+
+        parts = message.text.split(
+            maxsplit=1
+        )
+
+        if len(parts) == 2:
+            start_param = parts[1].strip()
+
+    # ==================================================
+    # 🎲 ورود مستقیم به قرعه‌کشی
+    # ==================================================
+
+    if start_param and start_param.startswith("giveaway_"):
+
+        try:
+
+            giveaway_id = int(
+                start_param.replace(
+                    "giveaway_",
+                    "",
+                    1
+                )
+            )
+
+        except ValueError:
+
+            giveaway_id = None
+
+        if giveaway_id is not None:
+
+            async with Session() as session:
+
+                await get_user(
+                    session,
+                    message
+                )
+
+                result = await session.execute(
+                    select(Giveaway).where(
+                        Giveaway.id == giveaway_id
+                    )
+                )
+
+                giveaway = (
+                    result.scalar_one_or_none()
+                )
+
+                if not giveaway:
+
+                    await message.answer(
+                        "❌ این قرعه‌کشی پیدا نشد."
+                    )
+
+                    return
+
+                now = datetime.now(
+                    IRAN_TIMEZONE
+                ).replace(tzinfo=None)
+
+                if (
+                    not giveaway.is_active
+                    or giveaway.is_drawn
+                    or giveaway.end_time <= now
+                ):
+
+                    await message.answer(
+                        "⏰ مهلت شرکت در این قرعه‌کشی "
+                        "به پایان رسیده."
+                    )
+
+                    return
+
+                # بررسی شرکت قبلی
+                participant_result = await session.execute(
+                    select(GiveawayParticipant).where(
+                        GiveawayParticipant.giveaway_id
+                        == giveaway.id,
+                        GiveawayParticipant.user_id
+                        == message.from_user.id
+                    )
+                )
+
+                participant = (
                     participant_result
                     .scalar_one_or_none()
                 )
@@ -1299,11 +1437,86 @@ async def start_handler(message: Message):
 
                 await session.commit()
 
+                # شمارش شرکت‌کنندگان
+                participants_result = await session.execute(
+                    select(GiveawayParticipant).where(
+                        GiveawayParticipant.giveaway_id
+                        == giveaway.id
+                    )
+                )
+
+                participants = (
+                    participants_result.scalars().all()
+                )
+
+                participant_count = len(
+                    participants
+                )
+
+                # به‌روزرسانی شمارنده روی پست کانال
+                if giveaway.channel_message_id:
+
+                    post_text = giveaway.post_text or ""
+
+                    # حذف شمارنده قبلی در صورت وجود
+                    lines = post_text.splitlines()
+
+                    lines = [
+                        line
+                        for line in lines
+                        if not line.startswith(
+                            "👥 تعداد شرکت‌کنندگان:"
+                        )
+                    ]
+
+                    updated_text = (
+                        "\n".join(lines).rstrip()
+                        + "\n\n"
+                        + f"👥 تعداد شرکت‌کنندگان: "
+                        f"{participant_count} نفر"
+                    )
+
+                    me = await bot.get_me()
+
+                    keyboard = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [
+                                InlineKeyboardButton(
+                                    text="🎲 شرکت در قرعه‌کشی 🎁",
+                                    url=(
+                                        f"https://t.me/"
+                                        f"{me.username}"
+                                        f"?start=giveaway_{giveaway.id}"
+                                    )
+                                )
+                            ]
+                        ]
+                    )
+
+                    try:
+
+                        await bot.edit_message_text(
+                            chat_id=CHANNEL_USERNAME,
+                            message_id=(
+                                giveaway.channel_message_id
+                            ),
+                            text=updated_text,
+                            reply_markup=keyboard
+                        )
+
+                    except Exception as e:
+
+                        print(
+                            f"❌ Giveaway counter update error: {e}"
+                        )
+
                 await message.answer(
                     "🎉 با موفقیت در قرعه‌کشی شرکت کردی!\n\n"
                     f"🎲 {giveaway.title}\n"
                     f"🎁 جایزه: {giveaway.prize}\n"
-                    f"🏆 تعداد برنده: {giveaway.winner_count}\n\n"
+                    f"🏆 تعداد برنده: {giveaway.winner_count}\n"
+                    f"👥 تعداد شرکت‌کنندگان: "
+                    f"{participant_count} نفر\n\n"
                     "🍀 امیدوارم برنده باشی!"
                 )
 
