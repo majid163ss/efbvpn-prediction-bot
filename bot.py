@@ -183,6 +183,11 @@ class Match(Base):
         default=False
     )
 
+    result_published: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
     channel_message_id: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True
