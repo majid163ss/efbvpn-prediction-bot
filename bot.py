@@ -1569,6 +1569,135 @@ async def giveaway_publish_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data.startswith("publish_giveaway:"))
+async def publish_giveaway_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    try:
+        giveaway_id = int(
+            callback.data.split(":", 1)[1]
+        )
+    except (ValueError, IndexError):
+        await callback.answer(
+            "❌ شناسه قرعه‌کشی نامعتبره.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway).where(
+                Giveaway.id == giveaway_id
+            )
+        )
+
+        giveaway = result.scalar_one_or_none()
+
+        if not giveaway:
+            await callback.answer(
+                "❌ قرعه‌کشی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        if giveaway.is_drawn:
+            await callback.answer(
+                "❌ این قرعه‌کشی قبلاً انجام شده.",
+                show_alert=True
+            )
+            return
+
+        now = datetime.now(
+            IRAN_TIMEZONE
+        ).replace(tzinfo=None)
+
+        if giveaway.end_time <= now:
+            await callback.answer(
+                "⏰ زمان این قرعه‌کشی گذشته.",
+                show_alert=True
+            )
+            return
+
+        if giveaway.is_announced:
+            await callback.answer(
+                "ℹ️ این قرعه‌کشی قبلاً در کانال منتشر شده.",
+                show_alert=True
+            )
+            return
+
+        # گرفتن نام کاربری ربات
+        me = await bot.get_me()
+
+        if not me.username:
+            await callback.answer(
+                "❌ نام کاربری ربات پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        # دکمه شرکت در قرعه‌کشی
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🎲 شرکت در قرعه‌کشی 🎁",
+                        url=(
+                            f"https://t.me/"
+                            f"{me.username}"
+                            f"?start=giveaway_{giveaway.id}"
+                        )
+                    )
+                ]
+            ]
+        )
+
+        post_text = giveaway.post_text
+
+        if not post_text:
+            post_text = (
+                f"🔥 قرعه‌کشی ویژه شروع شد! 🔥\n\n"
+                f"🎁 جایزه: {giveaway.prize}\n"
+                f"🏆 تعداد برنده: {giveaway.winner_count} نفر\n\n"
+                f"⏰ پایان: {giveaway.end_time.strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"👇 برای شرکت روی دکمه زیر بزن 👇\n\n"
+                f"🍀 موفق باشی!"
+            )
+
+        # انتشار در کانال
+        sent_message = await bot.send_message(
+            chat_id=CHANNEL_USERNAME,
+            text=post_text,
+            reply_markup=keyboard
+        )
+
+        # ذخیره اطلاعات انتشار
+        giveaway.channel_message_id = (
+            sent_message.message_id
+        )
+
+        giveaway.is_announced = True
+
+        await session.commit()
+
+    await callback.message.edit_text(
+        "✅ قرعه‌کشی با موفقیت در کانال منتشر شد! 🎉\n\n"
+        f"🎲 {giveaway.title}\n"
+        f"🎁 جایزه: {giveaway.prize}\n"
+        f"🏆 تعداد برنده: {giveaway.winner_count}\n\n"
+        "📢 دکمه «🎲 شرکت در قرعه‌کشی 🎁» هم به پست اضافه شد."
+    )
+
+    await callback.answer(
+        "✅ منتشر شد!",
+        show_alert=True
+    )
 @dp.callback_query(F.data == "giveaway_create")
 async def giveaway_create_callback(callback):
 
