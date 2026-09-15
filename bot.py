@@ -7591,7 +7591,7 @@ async def auto_draw_giveaways():
 
                             user_result = await session.execute(
                                 select(User).where(
-                                    User.id == user_id
+                                    User.telegram_id == user_id
                                 )
                             )
 
