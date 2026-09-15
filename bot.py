@@ -1129,6 +1129,187 @@ async def is_member(bot, user_id, chat_username):
         )
 
         return False
+        # =========================================================
+# 📌 نگه داشتن پست قرعه‌کشی در آخر کانال
+# =========================================================
+
+giveaway_repost_lock = False
+
+
+async def repost_active_giveaway():
+
+    global giveaway_repost_lock
+
+    if giveaway_repost_lock:
+        return
+
+    giveaway_repost_lock = True
+
+    try:
+
+        async with Session() as session:
+
+            now = datetime.now(
+                IRAN_TIMEZONE
+            ).replace(tzinfo=None)
+
+            result = await session.execute(
+                select(Giveaway)
+                .where(
+                    Giveaway.is_active == True,
+                    Giveaway.is_drawn == False,
+                    Giveaway.is_announced == True,
+                    Giveaway.end_time > now
+                )
+                .order_by(
+                    Giveaway.id.desc()
+                )
+            )
+
+            giveaway = result.scalars().first()
+
+            if not giveaway:
+                return
+
+            # گرفتن تعداد شرکت‌کنندگان
+            participants_result = await session.execute(
+                select(GiveawayParticipant).where(
+                    GiveawayParticipant.giveaway_id
+                    == giveaway.id
+                )
+            )
+
+            participants = (
+                participants_result.scalars().all()
+            )
+
+            participant_count = len(
+                participants
+            )
+
+            me = await bot.get_me()
+
+            if not me.username:
+                return
+
+            # ساخت متن اصلی پست
+            post_text = giveaway.post_text or ""
+
+            lines = post_text.splitlines()
+
+            # حذف شمارنده قبلی
+            lines = [
+                line
+                for line in lines
+                if not line.startswith(
+                    "👥 تعداد شرکت‌کنندگان:"
+                )
+            ]
+
+            updated_text = (
+                "\n".join(lines).rstrip()
+                + "\n\n"
+                + f"👥 تعداد شرکت‌کنندگان: "
+                f"{participant_count} نفر"
+            )
+
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🎲 شرکت در قرعه‌کشی 🎁",
+                            url=(
+                                f"https://t.me/"
+                                f"{me.username}"
+                                f"?start=giveaway_{giveaway.id}"
+                            )
+                        )
+                    ]
+                ]
+            )
+
+            old_message_id = (
+                giveaway.channel_message_id
+            )
+
+            # حذف پست قبلی قرعه‌کشی
+            if old_message_id:
+
+                try:
+
+                    await bot.delete_message(
+                        chat_id=CHANNEL_USERNAME,
+                        message_id=old_message_id
+                    )
+
+                except Exception as e:
+
+                    print(
+                        f"⚠️ خطا در حذف پست قبلی "
+                        f"قرعه‌کشی: {e}"
+                    )
+
+                    return
+
+            # انتشار دوباره در انتهای کانال
+            sent_message = await bot.send_message(
+                chat_id=CHANNEL_USERNAME,
+                text=updated_text,
+                reply_markup=keyboard
+            )
+
+            # ذخیره شناسه پست جدید
+            giveaway.channel_message_id = (
+                sent_message.message_id
+            )
+
+            await session.commit()
+
+            print(
+                f"📌 Giveaway moved to last post | "
+                f"giveaway={giveaway.id} | "
+                f"message={sent_message.message_id} | "
+                f"participants={participant_count}"
+            )
+
+    except Exception as e:
+
+        print(
+            f"❌ Giveaway repost error: {e}"
+        )
+
+    finally:
+
+        giveaway_repost_lock = False
+
+
+@dp.channel_post()
+async def channel_post_handler(message):
+
+    # فقط پست‌های کانال موردنظر
+    if not message.chat.username:
+        return
+
+    if (
+        f"@{message.chat.username}".lower()
+        != CHANNEL_USERNAME.lower()
+    ):
+        return
+
+    # اگر خود ربات در حال انتشار مجدد است،
+    # دوباره این تابع را اجرا نکن
+    if giveaway_repost_lock:
+        return
+
+    print(
+        f"📢 New channel post detected | "
+        f"chat={message.chat.username} | "
+        f"message_id={message.message_id}"
+    )
+
+    await asyncio.sleep(1)
+
+    await repost_active_giveaway()
 
 # =========================
 # START
