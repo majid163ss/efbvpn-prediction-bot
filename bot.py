@@ -2016,6 +2016,524 @@ async def publish_giveaway_callback(callback):
         "✅ منتشر شد!",
         show_alert=True
     )
+    # =========================================================
+# 🎲 مدیریت قرعه‌کشی‌ها
+# =========================================================
+
+
+@dp.callback_query(F.data == "giveaway_active")
+async def giveaway_active_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway)
+            .where(
+                Giveaway.is_active == True,
+                Giveaway.is_drawn == False
+            )
+            .order_by(
+                Giveaway.id.desc()
+            )
+        )
+
+        giveaways = result.scalars().all()
+
+        if not giveaways:
+
+            await callback.message.edit_text(
+                "🎁 قرعه‌کشی‌های فعال\n\n"
+                "📭 در حال حاضر هیچ قرعه‌کشی فعالی وجود نداره.",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🔙 بازگشت",
+                                callback_data="admin_giveaway"
+                            )
+                        ]
+                    ]
+                )
+            )
+
+            await callback.answer()
+            return
+
+        text = "🎁 قرعه‌کشی‌های فعال\n\n"
+
+        for giveaway in giveaways:
+
+            participants_result = await session.execute(
+                select(GiveawayParticipant).where(
+                    GiveawayParticipant.giveaway_id
+                    == giveaway.id
+                )
+            )
+
+            participant_count = len(
+                participants_result.scalars().all()
+            )
+
+            text += (
+                f"🎲 {giveaway.title}\n"
+                f"🎁 جایزه: {giveaway.prize}\n"
+                f"🏆 برنده: {giveaway.winner_count} نفر\n"
+                f"👥 شرکت‌کنندگان: {participant_count} نفر\n"
+                f"⏰ پایان: "
+                f"{giveaway.end_time.strftime('%Y-%m-%d %H:%M')}\n"
+                f"━━━━━━━━━━━━━━\n"
+            )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="admin_giveaway"
+                        )
+                    ]
+                ]
+            )
+        )
+
+    await callback.answer()
+
+
+# =========================================================
+# 👥 انتخاب قرعه‌کشی برای مشاهده شرکت‌کنندگان
+# =========================================================
+
+
+@dp.callback_query(F.data == "giveaway_participants")
+async def giveaway_participants_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway)
+            .order_by(
+                Giveaway.id.desc()
+            )
+            .limit(10)
+        )
+
+        giveaways = result.scalars().all()
+
+    if not giveaways:
+
+        await callback.answer(
+            "📭 هنوز قرعه‌کشی‌ای ساخته نشده.",
+            show_alert=True
+        )
+        return
+
+    keyboard = []
+
+    for giveaway in giveaways:
+
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"🎲 {giveaway.title}",
+                callback_data=(
+                    f"giveaway_participants:"
+                    f"{giveaway.id}"
+                )
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_giveaway"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "👥 شرکت‌کنندگان\n\n"
+        "قرعه‌کشی موردنظر رو انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=keyboard
+        )
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# 👥 نمایش شرکت‌کنندگان
+# =========================================================
+
+
+@dp.callback_query(
+    F.data.startswith("giveaway_participants:")
+)
+async def giveaway_participants_list_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    try:
+
+        giveaway_id = int(
+            callback.data.split(":", 1)[1]
+        )
+
+    except (ValueError, IndexError):
+
+        await callback.answer(
+            "❌ شناسه نامعتبره.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        giveaway_result = await session.execute(
+            select(Giveaway).where(
+                Giveaway.id == giveaway_id
+            )
+        )
+
+        giveaway = (
+            giveaway_result.scalar_one_or_none()
+        )
+
+        if not giveaway:
+
+            await callback.answer(
+                "❌ قرعه‌کشی پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        participants_result = await session.execute(
+            select(GiveawayParticipant).where(
+                GiveawayParticipant.giveaway_id
+                == giveaway.id
+            )
+        )
+
+        participants = (
+            participants_result.scalars().all()
+        )
+
+        text = (
+            f"👥 شرکت‌کنندگان\n\n"
+            f"🎲 {giveaway.title}\n"
+            f"📊 تعداد: {len(participants)} نفر\n\n"
+        )
+
+        if not participants:
+
+            text += "📭 هنوز کسی شرکت نکرده."
+
+        else:
+
+            for number, participant in enumerate(
+                participants,
+                start=1
+            ):
+
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == participant.user_id
+                    )
+                )
+
+                user = (
+                    user_result.scalar_one_or_none()
+                )
+
+                if user:
+
+                    if user.username:
+
+                        name = f"@{user.username}"
+
+                    elif user.first_name:
+
+                        name = user.first_name
+
+                    else:
+
+                        name = str(
+                            user.telegram_id
+                        )
+
+                else:
+
+                    name = str(
+                        participant.user_id
+                    )
+
+                text += (
+                    f"{number}. {name}\n"
+                )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="giveaway_participants"
+                        )
+                    ]
+                ]
+            )
+        )
+
+    await callback.answer()
+
+
+# =========================================================
+# 🏆 نتایج و برندگان
+# =========================================================
+
+
+@dp.callback_query(F.data == "giveaway_winners")
+async def giveaway_winners_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway)
+            .where(
+                Giveaway.is_drawn == True
+            )
+            .order_by(
+                Giveaway.id.desc()
+            )
+            .limit(10)
+        )
+
+        giveaways = result.scalars().all()
+
+        if not giveaways:
+
+            await callback.message.edit_text(
+                "🏆 نتایج و برندگان\n\n"
+                "📭 هنوز هیچ قرعه‌کشی‌ای انجام نشده.",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🔙 بازگشت",
+                                callback_data="admin_giveaway"
+                            )
+                        ]
+                    ]
+                )
+            )
+
+            await callback.answer()
+            return
+
+        text = "🏆 نتایج و برندگان\n\n"
+
+        for giveaway in giveaways:
+
+            winners_result = await session.execute(
+                select(GiveawayWinner).where(
+                    GiveawayWinner.giveaway_id
+                    == giveaway.id
+                )
+            )
+
+            winners = (
+                winners_result.scalars().all()
+            )
+
+            text += (
+                f"🎲 {giveaway.title}\n"
+                f"🎁 {giveaway.prize}\n"
+            )
+
+            if not winners:
+
+                text += "❌ برنده‌ای ثبت نشده.\n\n"
+
+                continue
+
+            for number, winner in enumerate(
+                winners,
+                start=1
+            ):
+
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == winner.user_id
+                    )
+                )
+
+                user = (
+                    user_result.scalar_one_or_none()
+                )
+
+                if user:
+
+                    if user.username:
+
+                        name = f"@{user.username}"
+
+                    elif user.first_name:
+
+                        name = user.first_name
+
+                    else:
+
+                        name = str(
+                            user.telegram_id
+                        )
+
+                else:
+
+                    name = str(
+                        winner.user_id
+                    )
+
+                text += (
+                    f"🏆 {number}. {name}\n"
+                    f"🎁 جایزه: "
+                    f"{winner.prize_content}\n"
+                )
+
+            text += "━━━━━━━━━━━━━━\n"
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="admin_giveaway"
+                        )
+                    ]
+                ]
+            )
+        )
+
+    await callback.answer()
+
+
+# =========================================================
+# 📜 تاریخچه قرعه‌کشی‌ها
+# =========================================================
+
+
+@dp.callback_query(F.data == "giveaway_history")
+async def giveaway_history_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Giveaway)
+            .order_by(
+                Giveaway.id.desc()
+            )
+            .limit(20)
+        )
+
+        giveaways = result.scalars().all()
+
+        if not giveaways:
+
+            await callback.message.edit_text(
+                "📜 تاریخچه\n\n"
+                "📭 هنوز هیچ قرعه‌کشی‌ای ساخته نشده.",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="🔙 بازگشت",
+                                callback_data="admin_giveaway"
+                            )
+                        ]
+                    ]
+                )
+            )
+
+            await callback.answer()
+            return
+
+        text = "📜 تاریخچه قرعه‌کشی‌ها\n\n"
+
+        for giveaway in giveaways:
+
+            if giveaway.is_drawn:
+
+                status = "🏁 انجام شده"
+
+            elif giveaway.is_active:
+
+                status = "🟢 فعال"
+
+            else:
+
+                status = "⏸ غیرفعال"
+
+            text += (
+                f"🎲 {giveaway.title}\n"
+                f"🎁 {giveaway.prize}\n"
+                f"📌 وضعیت: {status}\n"
+                f"🏆 برنده‌ها: "
+                f"{giveaway.winner_count} نفر\n"
+                f"⏰ پایان: "
+                f"{giveaway.end_time.strftime('%Y-%m-%d %H:%M')}\n"
+                f"━━━━━━━━━━━━━━\n"
+            )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 بازگشت",
+                            callback_data="admin_giveaway"
+                        )
+                    ]
+                ]
+            )
+        )
+
+    await callback.answer()
 @dp.callback_query(F.data == "giveaway_create")
 async def giveaway_create_callback(callback):
 
