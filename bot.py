@@ -4339,6 +4339,7 @@ async def matches_callback(callback):
 
     await show_matches(
         callback.message
+        callback.from_user.id
     )
 
     await callback.answer()
