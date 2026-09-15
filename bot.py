@@ -4297,22 +4297,24 @@ async def giveaway_message_handler(message: Message):
 
         async with Session() as session:
 
-            giveaway = Giveaway(
-                title=title,
-                prize=prize,
-                prize_codes="\n".join(prize_codes),
-                end_time=end_time,
-                winner_count=winner_count,
-                is_active=True,
-                is_drawn=False,
-                is_announced=False
-            )
+                    giveaway = Giveaway(
+            title=title,
+            prize=prize,
+            prize_codes="\n".join(prize_codes),
+            end_time=end_time,
+            winner_count=winner_count,
+            channel_message_id=None,
+            is_active=True,
+            is_drawn=False,
+            is_announced=False,
+            post_text=post_text
+        )
 
-            session.add(giveaway)
+        session.add(giveaway)
 
-            await session.commit()
+        await session.commit()
 
-            giveaway_id = giveaway.id
+        giveaway_id = giveaway.id
 
         pending_giveaway.pop(
             user_id,
@@ -4325,7 +4327,8 @@ async def giveaway_message_handler(message: Message):
             f"🎁 جایزه: {prize}\n"
             f"👥 تعداد برنده: {winner_count}\n"
             f"⏰ پایان: {text}\n\n"
-            "📢 در مرحله بعد، قرعه‌کشی رو در کانال منتشر می‌کنیم."
+            "📝 متن پست هم ذخیره شد.\n\n"
+            "📢 آماده انتشار در کانال است."
         )
 
         return
