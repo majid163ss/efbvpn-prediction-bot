@@ -4213,7 +4213,24 @@ async def giveaway_message_handler(message: Message):
 
         return
 
-    # مرحله ۵: زمان پایان
+        # مرحله ۵: متن پست قرعه‌کشی
+    if pending.get("step") == "post_text":
+
+        pending["post_text"] = text
+        pending["step"] = "end_time"
+
+        await message.answer(
+            "⏰ حالا تاریخ و ساعت پایان قرعه‌کشی رو وارد کن.\n\n"
+            "فرمت:\n"
+            "YYYY-MM-DD HH:MM\n\n"
+            "مثلاً:\n"
+            "2026-09-20 21:00"
+        )
+
+        return
+
+
+    # مرحله ۶: زمان پایان
     if pending.get("step") == "end_time":
 
         try:
@@ -4247,8 +4264,9 @@ async def giveaway_message_handler(message: Message):
         prize = pending.get("prize")
         winner_count = pending.get("winner_count")
         prize_codes = pending.get("prize_codes", [])
+        post_text = pending.get("post_text")
 
-        if not title or not prize:
+        if not title or not prize or not post_text:
 
             pending_giveaway.pop(
                 user_id,
@@ -4295,23 +4313,6 @@ async def giveaway_message_handler(message: Message):
             "📢 در مرحله بعد، قرعه‌کشی رو در کانال منتشر می‌کنیم."
         )
 
-        return
-@dp.message(F.text)
-async def weekly_prize_message_handler(message: Message):
-
-    user_id = message.from_user.id
-
-    if not is_admin(user_id):
-        return
-
-    pending = pending_prize.get(user_id)
-
-    if not pending:
-        return
-
-    text = message.text.strip()
-
-    if not text:
         return
 
     # مرحله اول: دریافت نام جایزه
