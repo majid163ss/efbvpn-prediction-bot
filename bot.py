@@ -1175,6 +1175,7 @@ pending_match = {}
 pending_prize = {}
 pending_giveaway = {}
 pending_publish_selection = {}
+pending_result_selection = {}
 
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
