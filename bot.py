@@ -3798,6 +3798,12 @@ async def admin_add_match_message(message: Message):
             ],
             [
                 InlineKeyboardButton(
+                    text="📢 انتشار بازی‌ها",
+                    callback_data="admin_publish_matches"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="🔙 بازگشت",
                     callback_data="admin_prediction"
                 )
