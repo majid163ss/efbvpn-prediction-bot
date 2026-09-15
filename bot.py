@@ -3723,6 +3723,79 @@ async def admin_result_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "admin_publish_results")
+async def admin_publish_results_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(Match)
+            .where(
+                Match.is_finished == True,
+                Match.result_published == False
+            )
+            .order_by(
+                Match.start_time
+            )
+        )
+
+        matches = result.scalars().all()
+
+    if not matches:
+        await callback.answer(
+            "❌ هیچ نتیجه‌ای برای انتشار وجود ندارد.",
+            show_alert=True
+        )
+        return
+
+    pending_result_selection = {}
+
+    buttons = []
+
+    for match in matches:
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=(
+                    f"☐ {match.home_team} "
+                    f"{match.home_score} - "
+                    f"{match.away_score} "
+                    f"{match.away_team}"
+                ),
+                callback_data=f"publish_result_select:{match.id}"
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="📢 انتشار نتایج انتخاب‌شده (0)",
+            callback_data="publish_results_selected"
+        )
+    ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="admin_prediction"
+        )
+    ])
+
+    await callback.message.edit_text(
+        "📢 انتخاب نتایج برای انتشار\n\n"
+        "نتایجی که می‌خواهی در کانال منتشر شوند را انتخاب کن:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=buttons
+        )
+    )
+
+    await callback.answer()
 @dp.callback_query(F.data == "admin_add_match")
 async def admin_add_match_callback(callback):
 
