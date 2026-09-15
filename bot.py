@@ -4200,7 +4200,7 @@ async def giveaway_message_handler(message: Message):
             return
 
         pending["prize_codes"] = codes
-        pending["step"] = "end_time"
+        pending["step"] = "post_text"
 
         await message.answer(
             "⏰ حالا تاریخ و ساعت پایان قرعه‌کشی رو وارد کن.\n\n"
