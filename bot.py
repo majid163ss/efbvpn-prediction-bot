@@ -715,7 +715,7 @@ def main_menu():
                 [
                     InlineKeyboardButton(
                         text="🔧 ربات در حال بروزرسانی",
-                        callback_data="maintenance"
+                        callback_data="noop"
                     )
                 ]
             ]
