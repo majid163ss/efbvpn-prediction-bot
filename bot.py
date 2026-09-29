@@ -709,6 +709,17 @@ async def get_user(
 # MAIN MENU
 # =========================
 def main_menu():
+    if MAINTENANCE_MODE:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔧 ربات در حال بروزرسانی",
+                        callback_data="maintenance"
+                    )
+                ]
+            ]
+        )
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
