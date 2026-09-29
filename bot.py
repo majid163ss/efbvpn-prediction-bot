@@ -4873,11 +4873,18 @@ async def prediction_menu_callback(callback):
 @dp.callback_query(F.data == "matches")
 async def matches_callback(callback):
 
-   # await callback.message.delete()
+    if MAINTENANCE_MODE:
+        await callback.answer(
+            "🔧 ربات در حال بروزرسانی است.",
+            show_alert=True
+        )
+        return
+
+    # await callback.message.delete()
 
     await show_matches(
-    callback.message,
-    callback.from_user.id
+        callback.message,
+        callback.from_user.id
     )
 
     await callback.answer()
@@ -4886,6 +4893,13 @@ async def matches_callback(callback):
 @dp.callback_query(F.data == "leaderboard")
 async def leaderboard_callback(callback):
 
+    if MAINTENANCE_MODE:
+        await callback.answer(
+            "🔧 ربات در حال بروزرسانی است.",
+            show_alert=True
+        )
+        return
+
     await callback.message.delete()
 
     await show_leaderboard(
@@ -4893,8 +4907,10 @@ async def leaderboard_callback(callback):
     )
 
     await callback.answer()
-    
+
+
 async def save_weekly_winner():
+
     now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
 
     days_since_saturday = (now.weekday() + 2) % 7
