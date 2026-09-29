@@ -2603,7 +2603,7 @@ async def giveaway_publish_callback(callback):
 
         giveaway = result.scalars().first()
 
-    if not giveaway:
+    if giveaway is None:
 
         await callback.answer(
             "❌ قرعه‌کشی فعالی برای انتشار وجود نداره.",
@@ -2628,12 +2628,16 @@ async def giveaway_publish_callback(callback):
         ]
     )
 
-    await callback.message.edit_text(
-        "🎲 قرعه‌کشی آماده انتشار:\n\n"
-        f"🎁 {giveaway.title}\n"
+    message_text = (
+        "🎲 قرعه‌کشی آماده انتشار\n\n"
+        f"🎁 عنوان: {giveaway.title}\n"
         f"🏆 جایزه: {giveaway.prize}\n"
         f"👥 تعداد برنده: {giveaway.winner_count}\n\n"
-        "برای انتشار در کانال روی دکمه زیر بزن:",
+        "برای انتشار در کانال، روی دکمه زیر بزن:"
+    )
+
+    await callback.message.edit_text(
+        message_text,
         reply_markup=keyboard
     )
 
