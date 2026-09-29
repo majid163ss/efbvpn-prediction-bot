@@ -1223,11 +1223,16 @@ pending_giveaway = {}
 pending_publish_selection = {}
 pending_result_selection = {}
 
+# عضویت‌های اجباری قدیمی
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
 
 
-async def is_member(bot, user_id, chat_username):
+async def is_member(
+    bot,
+    user_id,
+    chat_username
+):
 
     try:
 
@@ -1272,6 +1277,37 @@ async def is_member(bot, user_id, chat_username):
         )
 
         return False
+
+
+async def check_required_chats(
+    bot,
+    user_id
+):
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat)
+            .where(
+                RequiredChat.is_active == True
+            )
+            .order_by(
+                RequiredChat.id.asc()
+            )
+        )
+
+        required_chats = result.scalars().all()
+
+    for chat in required_chats:
+
+        if not await is_member(
+            bot,
+            user_id,
+            chat.chat_id
+        ):
+            return False
+
+    return True
         # =========================================================
 # 📌 نگه داشتن پست قرعه‌کشی در آخر کانال
 # =========================================================
