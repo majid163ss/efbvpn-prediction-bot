@@ -5109,6 +5109,13 @@ async def weekly_callback(callback):
 @dp.callback_query(F.data == "mine")
 async def mine_callback(callback):
 
+    if MAINTENANCE_MODE:
+        await callback.answer(
+            "🔧 ربات در حال بروزرسانی است.",
+            show_alert=True
+        )
+        return
+
     user_id = callback.from_user.id
 
     async with Session() as session:
@@ -5200,7 +5207,6 @@ async def mine_callback(callback):
     )
 
     await callback.answer()
-
         
 
 
