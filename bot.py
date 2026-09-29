@@ -4748,6 +4748,12 @@ async def check_membership_callback(callback):
     await callback.answer()
 @dp.callback_query(F.data == "prediction_menu")
 async def prediction_menu_callback(callback):
+        if MAINTENANCE_MODE:
+        await callback.answer(
+            "🔧 ربات در حال بروزرسانی است.",
+            show_alert=True
+        )
+        return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
