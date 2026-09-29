@@ -1882,6 +1882,12 @@ async def admin_panel_callback(callback):
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
             )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔐 مدیریت عضویت اجباری",
+                callback_data="admin_required_chats"
+            )
         ]
     ]
 
@@ -1907,6 +1913,78 @@ async def admin_panel_callback(callback):
     await callback.message.edit_text(
         "⚙️ پنل مدیریت\n\n"
         "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+@dp.callback_query(F.data == "admin_required_chats")
+async def admin_required_chats_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat)
+            .order_by(RequiredChat.id.asc())
+        )
+
+        required_chats = result.scalars().all()
+
+    text = (
+        "🔐 مدیریت عضویت اجباری\n\n"
+        "از این بخش می‌تونی گروه‌ها و کانال‌هایی "
+        "که کاربر باید عضو آن‌ها باشه رو مدیریت کنی.\n\n"
+    )
+
+    if not required_chats:
+        text += "📭 هنوز هیچ موردی ثبت نشده."
+    else:
+        text += "📋 موارد ثبت‌شده:\n\n"
+
+        for index, chat in enumerate(
+            required_chats,
+            start=1
+        ):
+            status = "🟢 فعال" if chat.is_active else "🔴 غیرفعال"
+
+            text += (
+                f"{index}. {chat.title}\n"
+                f"   🆔 {chat.chat_id}\n"
+                f"   📌 نوع: {chat.chat_type}\n"
+                f"   وضعیت: {status}\n\n"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ افزودن گروه/کانال",
+                    callback_data="required_chat_add"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 مدیریت موارد",
+                    callback_data="required_chat_manage"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        text,
         reply_markup=keyboard
     )
 
