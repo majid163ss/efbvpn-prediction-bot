@@ -2774,10 +2774,14 @@ async def publish_giveaway_callback(callback):
 @dp.message(Command("admin"))
 async def admin_command(message: Message):
 
+    print(
+        f"🔧 ADMIN COMMAND | "
+        f"user_id={message.from_user.id} | "
+        f"text={message.text}"
+    )
+
     if not is_admin(message.from_user.id):
-        await message.answer(
-            "⛔ دسترسی نداری."
-        )
+        await message.answer("⛔ دسترسی نداری.")
         return
 
     keyboard_buttons = [
@@ -2809,7 +2813,7 @@ async def admin_command(message: Message):
             InlineKeyboardButton(
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
-            )
+            ]
         ],
         [
             InlineKeyboardButton(
