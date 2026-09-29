@@ -1227,6 +1227,9 @@ pending_result_selection = {}
 REQUIRED_CHANNEL = "@EFbVpn"
 REQUIRED_GROUP = "@EFbVpn_Gp"
 
+# عملیات افزودن عضویت اجباری
+pending_required_chat = {}
+
 
 async def is_member(
     bot,
@@ -1248,7 +1251,6 @@ async def is_member(
             f"status={member.status}"
         )
 
-        # کاربر عضو عادی، ادمین یا مالک است
         if member.status in {
             ChatMemberStatus.MEMBER,
             ChatMemberStatus.ADMINISTRATOR,
@@ -1256,7 +1258,6 @@ async def is_member(
         }:
             return True
 
-        # کاربر عضو گروه است ولی دسترسی‌هایش محدود شده
         if member.status == ChatMemberStatus.RESTRICTED:
 
             return getattr(
@@ -1308,6 +1309,166 @@ async def check_required_chats(
             return False
 
     return True
+
+
+@dp.callback_query(F.data == "required_chat_add")
+async def required_chat_add_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    pending_required_chat[
+        callback.from_user.id
+    ] = True
+
+    await callback.message.answer(
+        "➕ افزودن گروه/کانال\n\n"
+        "آیدی گروه یا کانال را ارسال کن.\n\n"
+        "مثال:\n"
+        "@EFbVpn_New\n\n"
+        "یا آیدی عددی:\n"
+        "-1001234567890\n\n"
+        "❌ برای لغو: /cancel"
+    )
+
+    await callback.answer()
+
+
+@dp.message()
+async def required_chat_input_handler(message: Message):
+
+    user_id = message.from_user.id
+
+    if user_id not in pending_required_chat:
+        return
+
+    if not is_admin(user_id):
+
+        pending_required_chat.pop(
+            user_id,
+            None
+        )
+
+        return
+
+    if not message.text:
+        return
+
+    chat_id = message.text.strip()
+
+    if chat_id == "/cancel":
+
+        pending_required_chat.pop(
+            user_id,
+            None
+        )
+
+        await message.answer(
+            "❌ عملیات لغو شد."
+        )
+
+        return
+
+    try:
+
+        chat = await bot.get_chat(chat_id)
+
+    except Exception as e:
+
+        print(
+            f"❌ Required chat error: {e}"
+        )
+
+        await message.answer(
+            "❌ گروه یا کانال پیدا نشد.\n\n"
+            "مطمئن شو آیدی را درست وارد کردی و "
+            "ربات داخل آن گروه/کانال عضو است."
+        )
+
+        return
+
+    if chat.type not in {
+        "group",
+        "supergroup",
+        "channel"
+    }:
+
+        await message.answer(
+            "❌ فقط گروه، سوپرگروه یا کانال قابل اضافه شدن است."
+        )
+
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat).where(
+                RequiredChat.chat_id == str(chat.id)
+            )
+        )
+
+        existing = result.scalar_one_or_none()
+
+        if existing:
+
+            pending_required_chat.pop(
+                user_id,
+                None
+            )
+
+            await message.answer(
+                "⚠️ این گروه/کانال قبلاً ثبت شده است."
+            )
+
+            return
+
+        new_chat = RequiredChat(
+            chat_id=str(chat.id),
+            title=chat.title or "بدون نام",
+            chat_type=chat.type,
+            is_active=True
+        )
+
+        session.add(new_chat)
+
+        await session.commit()
+
+    pending_required_chat.pop(
+        user_id,
+        None
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔐 مدیریت عضویت اجباری",
+                    callback_data="admin_required_chats"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⚙️ پنل مدیریت",
+                    callback_data="admin_panel"
+                )
+            ]
+        ]
+    )
+
+    await message.answer(
+        "✅ با موفقیت اضافه شد!\n\n"
+        f"📌 نام: {chat.title}\n"
+        f"🆔 آیدی: {chat.id}\n"
+        f"📂 نوع: {chat.type}\n"
+        "🟢 وضعیت: فعال",
+        reply_markup=keyboard
+    )
+
+
         # =========================================================
 # 📌 نگه داشتن پست قرعه‌کشی در آخر کانال
 # =========================================================
