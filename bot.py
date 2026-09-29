@@ -2608,6 +2608,12 @@ async def admin_command(message: Message):
             InlineKeyboardButton(
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
+            ]
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔐 مدیریت عضویت اجباری",
+                callback_data="admin_required_chats"
             )
         ]
     ]
