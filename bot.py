@@ -2459,6 +2459,72 @@ async def publish_giveaway_callback(callback):
         "✅ منتشر شد!",
         show_alert=True
     )
+@dp.message(Command("admin"))
+async def admin_command(message: Message):
+
+    if not is_admin(message.from_user.id):
+        await message.answer(
+            "⛔ دسترسی نداری."
+        )
+        return
+
+    keyboard_buttons = [
+        [
+            InlineKeyboardButton(
+                text="🎯 مدیریت پیش‌بینی",
+                callback_data="admin_prediction"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 افزودن مکس eFootball",
+                callback_data="admin_add_gallery"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 مدیریت eFootball",
+                callback_data="admin_efootball"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎁 مدیریت جایزه هفتگی",
+                callback_data="admin_weekly_prize"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎲 مدیریت قرعه‌کشی",
+                callback_data="admin_giveaway"
+            )
+        ]
+    ]
+
+    if is_super_admin(message.from_user.id):
+        keyboard_buttons.append([
+            InlineKeyboardButton(
+                text="👑 مدیریت ادمین‌ها",
+                callback_data="admin_manage"
+            )
+        ])
+
+    keyboard_buttons.append([
+        InlineKeyboardButton(
+            text="🔙 بازگشت",
+            callback_data="home"
+        )
+    ])
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=keyboard_buttons
+    )
+
+    await message.answer(
+        "⚙️ پنل مدیریت\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
     # =========================================================
 # 🎲 مدیریت قرعه‌کشی‌ها
 # =========================================================
