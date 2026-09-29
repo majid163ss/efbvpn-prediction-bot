@@ -309,6 +309,39 @@ class WeeklyPrize(Base):
         DateTime,
         default=datetime.utcnow
     )
+class RequiredChat(Base):
+    __tablename__ = "required_chats"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    chat_id: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False
+    )
+
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False
+    )
+
+    chat_type: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
 class GalleryImage(Base):
     __tablename__ = "gallery_images"
 
