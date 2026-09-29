@@ -2813,7 +2813,7 @@ async def admin_command(message: Message):
             InlineKeyboardButton(
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
-            ]
+            )
         ],
         [
             InlineKeyboardButton(
@@ -2824,19 +2824,23 @@ async def admin_command(message: Message):
     ]
 
     if is_super_admin(message.from_user.id):
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                text="👑 مدیریت ادمین‌ها",
-                callback_data="admin_manage"
-            )
-        ])
-
-    keyboard_buttons.append([
-        InlineKeyboardButton(
-            text="🔙 بازگشت",
-            callback_data="home"
+        keyboard_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="👑 مدیریت ادمین‌ها",
+                    callback_data="admin_manage"
+                )
+            ]
         )
-    ])
+
+    keyboard_buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 بازگشت",
+                callback_data="home"
+            )
+        ]
+    )
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=keyboard_buttons
