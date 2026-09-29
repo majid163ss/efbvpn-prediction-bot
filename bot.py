@@ -4983,6 +4983,13 @@ async def save_weekly_winner():
 @dp.callback_query(F.data == "weekly")
 async def weekly_callback(callback):
 
+    if MAINTENANCE_MODE:
+        await callback.answer(
+            "🔧 ربات در حال بروزرسانی است.",
+            show_alert=True
+        )
+        return
+
     now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
 
     days_since_saturday = (now.weekday() + 2) % 7
