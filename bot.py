@@ -2809,7 +2809,7 @@ async def admin_command(message: Message):
             InlineKeyboardButton(
                 text="🎲 مدیریت قرعه‌کشی",
                 callback_data="admin_giveaway"
-            ]
+            )
         ],
         [
             InlineKeyboardButton(
