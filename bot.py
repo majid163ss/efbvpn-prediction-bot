@@ -1657,11 +1657,12 @@ async def channel_post_handler(message):
 
 @dp.message(Command("start"))
 async def start_handler(message: Message):
-        print(
+
+    print(
         f"🔥 START HANDLER RECEIVED | "
         f"user={message.from_user.id} | "
         f"text={message.text}"
-        )
+    )
 
     channel_member = await is_member(
         bot,
