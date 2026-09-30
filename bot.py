@@ -3130,6 +3130,20 @@ async def admin_command(message: Message):
         )
         return
 
+    sleep_status = (
+        "🌙 ربات در حالت خواب است"
+        if MAINTENANCE_MODE
+        else
+        "🟢 ربات فعال است"
+    )
+
+    sleep_button_text = (
+        "☀️ بیدار کردن ربات"
+        if MAINTENANCE_MODE
+        else
+        "🌙 خواباندن ربات"
+    )
+
     keyboard_buttons = [
         [
             InlineKeyboardButton(
@@ -3166,6 +3180,12 @@ async def admin_command(message: Message):
                 text="🔐 مدیریت عضویت اجباری",
                 callback_data="admin_required_chats"
             )
+        ],
+        [
+            InlineKeyboardButton(
+                text=sleep_button_text,
+                callback_data="toggle_sleep_mode"
+            )
         ]
     ]
 
@@ -3195,6 +3215,7 @@ async def admin_command(message: Message):
 
     await message.answer(
         "⚙️ پنل مدیریت\n\n"
+        f"{sleep_status}\n\n"
         "یکی از گزینه‌ها رو انتخاب کن:",
         reply_markup=keyboard
     )
