@@ -1668,49 +1668,81 @@ async def start_handler(message: Message):
         f"text={message.text}"
     )
 
-    channel_member = await is_member(
-        bot,
-        message.from_user.id,
-        REQUIRED_CHANNEL
-    )
-
-    group_member = await is_member(
-        bot,
-        message.from_user.id,
-        REQUIRED_GROUP
-    )
-
     # بررسی عضویت اجباری
-    if not channel_member or not group_member:
+    is_required_member = await check_required_chats(
+        bot,
+        message.from_user.id
+    )
 
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="📢 عضویت در کانال",
-                        url="https://t.me/EFbVpn"
+    if not is_required_member:
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(RequiredChat)
+                .where(
+                    RequiredChat.is_active == True
+                )
+                .order_by(
+                    RequiredChat.id.asc()
+                )
+            )
+
+            required_chats = result.scalars().all()
+
+        keyboard_buttons = []
+
+        for chat in required_chats:
+
+            try:
+
+                chat_info = await bot.get_chat(
+                    chat.chat_id
+                )
+
+                username = getattr(
+                    chat_info,
+                    "username",
+                    None
+                )
+
+                if username:
+
+                    keyboard_buttons.append(
+                        [
+                            InlineKeyboardButton(
+                                text=f"📢 عضویت در {chat.title}",
+                                url=f"https://t.me/{username}"
+                            )
+                        ]
                     )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="👥 عضویت در گروه",
-                        url="https://t.me/EFbVpn_Gp"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="✅ بررسی عضویت",
-                        callback_data="check_membership"
-                    )
-                ]
+
+            except Exception as e:
+
+                print(
+                    f"❌ Required chat link error | "
+                    f"chat={chat.chat_id} | "
+                    f"error={e}"
+                )
+
+        keyboard_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="✅ بررسی عضویت",
+                    callback_data="check_membership"
+                )
             ]
         )
 
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=keyboard_buttons
+        )
+
         await message.answer(
-            "🔐 برای استفاده از ربات باید در هر دو عضو باشی.\n\n"
-            "1️⃣ وارد کانال شو\n"
-            "2️⃣ وارد گروه شو\n"
-            "3️⃣ سپس روی «✅ بررسی عضویت» بزن",
+            "🔐 برای استفاده از ربات باید "
+            "در موارد زیر عضو باشی:\n\n"
+            "1️⃣ در همه موارد فعال عضو شو\n"
+            "2️⃣ سپس روی «✅ بررسی عضویت» بزن",
             reply_markup=keyboard
         )
 
@@ -1726,7 +1758,9 @@ async def start_handler(message: Message):
         )
 
         if len(parts) == 2:
+
             start_param = parts[1].strip()
+
     # ==================================================
     # 🎯 ورود مستقیم به بخش پیش‌بینی
     # ==================================================
