@@ -5448,22 +5448,16 @@ async def home_callback(callback):
 @dp.callback_query(F.data == "check_membership")
 async def check_membership_callback(callback):
 
-    channel_member = await is_member(
+    # بررسی عضویت در تمام موارد فعال
+    is_required_member = await check_required_chats(
         bot,
-        callback.from_user.id,
-        REQUIRED_CHANNEL
+        callback.from_user.id
     )
 
-    group_member = await is_member(
-        bot,
-        callback.from_user.id,
-        REQUIRED_GROUP
-    )
-
-    if not channel_member or not group_member:
+    if not is_required_member:
 
         await callback.answer(
-            "❌ هنوز در هر دو عضو نشدی.",
+            "❌ هنوز در همه گروه‌ها و کانال‌های اجباری عضو نشدی.",
             show_alert=True
         )
 
@@ -5483,8 +5477,6 @@ async def check_membership_callback(callback):
         "⚽ حالا می‌تونی از ربات استفاده کنی.",
         reply_markup=main_menu()
     )
-
-    await callback.answer()
 @dp.callback_query(F.data == "prediction_menu")
 async def prediction_menu_callback(callback):
 
