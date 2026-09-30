@@ -3219,6 +3219,121 @@ async def admin_command(message: Message):
         "یکی از گزینه‌ها رو انتخاب کن:",
         reply_markup=keyboard
     )
+@dp.callback_query(F.data == "toggle_sleep_mode")
+async def toggle_sleep_mode_callback(callback):
+
+    global MAINTENANCE_MODE
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    MAINTENANCE_MODE = not MAINTENANCE_MODE
+
+    if MAINTENANCE_MODE:
+
+        await callback.answer(
+            "🌙 ربات وارد حالت خواب شد."
+        )
+
+    else:
+
+        await callback.answer(
+            "☀️ ربات دوباره فعال شد."
+        )
+
+    sleep_status = (
+        "🌙 ربات در حالت خواب است"
+        if MAINTENANCE_MODE
+        else
+        "🟢 ربات فعال است"
+    )
+
+    sleep_button_text = (
+        "☀️ بیدار کردن ربات"
+        if MAINTENANCE_MODE
+        else
+        "🌙 خواباندن ربات"
+    )
+
+    keyboard_buttons = [
+        [
+            InlineKeyboardButton(
+                text="🎯 مدیریت پیش‌بینی",
+                callback_data="admin_prediction"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 افزودن مکس eFootball",
+                callback_data="admin_add_gallery"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 مدیریت eFootball",
+                callback_data="admin_efootball"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎁 مدیریت جایزه هفتگی",
+                callback_data="admin_weekly_prize"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎲 مدیریت قرعه‌کشی",
+                callback_data="admin_giveaway"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔐 مدیریت عضویت اجباری",
+                callback_data="admin_required_chats"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=sleep_button_text,
+                callback_data="toggle_sleep_mode"
+            )
+        ]
+    ]
+
+    if is_super_admin(callback.from_user.id):
+
+        keyboard_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="👑 مدیریت ادمین‌ها",
+                    callback_data="admin_manage"
+                )
+            ]
+        )
+
+    keyboard_buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 بازگشت",
+                callback_data="home"
+            )
+        ]
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=keyboard_buttons
+    )
+
+    await callback.message.edit_text(
+        "⚙️ پنل مدیریت\n\n"
+        f"{sleep_status}\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
+    )
     # =========================================================
 # 🎲 مدیریت قرعه‌کشی‌ها
 # =========================================================
