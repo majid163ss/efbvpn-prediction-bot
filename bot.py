@@ -2774,7 +2774,11 @@ async def publish_giveaway_callback(callback):
 @dp.message(Command("admin"))
 async def admin_command(message: Message):
 
-    await message.answer("✅ ADMIN TEST")
+    print("🔥 ADMIN HANDLER RECEIVED")
+
+    await message.answer(
+        "✅ دستور ادمین دریافت شد."
+    )
     # =========================================================
 # 🎲 مدیریت قرعه‌کشی‌ها
 # =========================================================
