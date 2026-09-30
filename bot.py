@@ -1338,7 +1338,11 @@ async def required_chat_add_callback(callback):
     await callback.answer()
 
 
-@dp.message()
+@dp.message(
+    F.text,
+    lambda message:
+        message.from_user.id in pending_required_chat
+)
 async def required_chat_input_handler(message: Message):
 
     user_id = message.from_user.id
