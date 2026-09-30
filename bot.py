@@ -2196,6 +2196,306 @@ async def admin_required_chats_callback(callback):
     )
 
     await callback.answer()
+@dp.callback_query(F.data == "required_chat_manage")
+async def required_chat_manage_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat)
+            .order_by(RequiredChat.id.asc())
+        )
+
+        required_chats = result.scalars().all()
+
+    if not required_chats:
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔙 بازگشت",
+                        callback_data="admin_required_chats"
+                    )
+                ]
+            ]
+        )
+
+        await callback.message.edit_text(
+            "📋 مدیریت موارد عضویت اجباری\n\n"
+            "📭 هنوز هیچ گروه یا کانالی ثبت نشده.",
+            reply_markup=keyboard
+        )
+
+        await callback.answer()
+        return
+
+    text = (
+        "📋 مدیریت موارد عضویت اجباری\n\n"
+        "برای مدیریت هر مورد، روی دکمه مربوط به آن بزن:\n\n"
+    )
+
+    keyboard_buttons = []
+
+    for index, chat in enumerate(
+        required_chats,
+        start=1
+    ):
+
+        status = "🟢 فعال" if chat.is_active else "🔴 غیرفعال"
+
+        text += (
+            f"{index}️⃣ {chat.title}\n"
+            f"📂 نوع: {chat.chat_type}\n"
+            f"🆔 {chat.chat_id}\n"
+            f"📌 وضعیت: {status}\n\n"
+        )
+
+        keyboard_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"⚙️ مدیریت {index}",
+                    callback_data=f"required_chat_item:{chat.id}"
+                )
+            ]
+        )
+
+    keyboard_buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 بازگشت",
+                callback_data="admin_required_chats"
+            )
+        ]
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=keyboard_buttons
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+@dp.callback_query(F.data.startswith("required_chat_item:"))
+async def required_chat_item_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    try:
+
+        chat_id = int(
+            callback.data.split(":", 1)[1]
+        )
+
+    except (ValueError, IndexError):
+
+        await callback.answer(
+            "❌ شناسه نامعتبره.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat).where(
+                RequiredChat.id == chat_id
+            )
+        )
+
+        chat = result.scalar_one_or_none()
+
+    if not chat:
+
+        await callback.answer(
+            "❌ این مورد پیدا نشد.",
+            show_alert=True
+        )
+        return
+
+    status = "🟢 فعال" if chat.is_active else "🔴 غیرفعال"
+
+    toggle_text = (
+        "🔴 غیرفعال کردن"
+        if chat.is_active
+        else
+        "🟢 فعال کردن"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=toggle_text,
+                    callback_data=f"required_chat_toggle:{chat.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑 حذف",
+                    callback_data=f"required_chat_delete:{chat.id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 بازگشت",
+                    callback_data="required_chat_manage"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "📌 مدیریت مورد\n\n"
+        f"📛 نام: {chat.title}\n"
+        f"🆔 آیدی: {chat.chat_id}\n"
+        f"📂 نوع: {chat.chat_type}\n"
+        f"📌 وضعیت: {status}",
+        reply_markup=keyboard
+    )
+
+    await callback.answer()
+@dp.callback_query(F.data.startswith("required_chat_toggle:"))
+async def required_chat_toggle_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    try:
+
+        chat_id = int(
+            callback.data.split(":", 1)[1]
+        )
+
+    except (ValueError, IndexError):
+
+        await callback.answer(
+            "❌ شناسه نامعتبره.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat).where(
+                RequiredChat.id == chat_id
+            )
+        )
+
+        chat = result.scalar_one_or_none()
+
+        if not chat:
+
+            await callback.answer(
+                "❌ مورد پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        chat.is_active = not chat.is_active
+
+        await session.commit()
+
+    await callback.answer(
+        "✅ وضعیت تغییر کرد."
+    )
+
+    await required_chat_item_callback(callback)
+
+
+@dp.callback_query(F.data.startswith("required_chat_delete:"))
+async def required_chat_delete_callback(callback):
+
+    if not is_admin(callback.from_user.id):
+        await callback.answer(
+            "⛔ دسترسی نداری.",
+            show_alert=True
+        )
+        return
+
+    try:
+
+        chat_id = int(
+            callback.data.split(":", 1)[1]
+        )
+
+    except (ValueError, IndexError):
+
+        await callback.answer(
+            "❌ شناسه نامعتبره.",
+            show_alert=True
+        )
+        return
+
+    async with Session() as session:
+
+        result = await session.execute(
+            select(RequiredChat).where(
+                RequiredChat.id == chat_id
+            )
+        )
+
+        chat = result.scalar_one_or_none()
+
+        if not chat:
+
+            await callback.answer(
+                "❌ مورد پیدا نشد.",
+                show_alert=True
+            )
+            return
+
+        title = chat.title
+
+        await session.delete(chat)
+        await session.commit()
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📋 مدیریت موارد",
+                    callback_data="required_chat_manage"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 مدیریت عضویت اجباری",
+                    callback_data="admin_required_chats"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(
+        "✅ مورد با موفقیت حذف شد.\n\n"
+        f"📛 {title}",
+        reply_markup=keyboard
+    )
+
+    await callback.answer(
+        "🗑 حذف شد."
+    )
 @dp.callback_query(F.data == "admin_publish_matches")
 async def admin_publish_matches_callback(callback):
 
