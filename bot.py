@@ -8870,7 +8870,7 @@ async def main():
     )
 
     print("Bot is running...")
-
+    print("🚀 STARTING POLLING...")
     await dp.start_polling(
         bot
     )
