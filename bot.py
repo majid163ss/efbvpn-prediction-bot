@@ -2784,10 +2784,85 @@ async def publish_giveaway_callback(callback):
 @dp.message(Command("admin"))
 async def admin_command(message: Message):
 
-    print("🔥 ADMIN HANDLER RECEIVED")
+    print(
+        f"🔧 ADMIN COMMAND | "
+        f"user_id={message.from_user.id} | "
+        f"text={message.text}"
+    )
+
+    if not is_admin(message.from_user.id):
+        await message.answer(
+            "⛔ دسترسی نداری."
+        )
+        return
+
+    keyboard_buttons = [
+        [
+            InlineKeyboardButton(
+                text="🎯 مدیریت پیش‌بینی",
+                callback_data="admin_prediction"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 افزودن مکس eFootball",
+                callback_data="admin_add_gallery"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎮 مدیریت eFootball",
+                callback_data="admin_efootball"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎁 مدیریت جایزه هفتگی",
+                callback_data="admin_weekly_prize"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎲 مدیریت قرعه‌کشی",
+                callback_data="admin_giveaway"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔐 مدیریت عضویت اجباری",
+                callback_data="admin_required_chats"
+            )
+        ]
+    ]
+
+    if is_super_admin(message.from_user.id):
+
+        keyboard_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="👑 مدیریت ادمین‌ها",
+                    callback_data="admin_manage"
+                )
+            ]
+        )
+
+    keyboard_buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 بازگشت",
+                callback_data="home"
+            )
+        ]
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=keyboard_buttons
+    )
 
     await message.answer(
-        "✅ دستور ادمین دریافت شد."
+        "⚙️ پنل مدیریت\n\n"
+        "یکی از گزینه‌ها رو انتخاب کن:",
+        reply_markup=keyboard
     )
     # =========================================================
 # 🎲 مدیریت قرعه‌کشی‌ها
