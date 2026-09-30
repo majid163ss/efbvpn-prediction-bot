@@ -8863,6 +8863,16 @@ async def auto_draw_giveaways():
 # 🚀 اجرای اصلی ربات
 # =========================================================
 
+@dp.message()
+async def debug_all_messages(message: Message):
+
+    print(
+        f"🔥 MESSAGE RECEIVED | "
+        f"user={message.from_user.id} | "
+        f"text={message.text}"
+    )
+
+
 async def main():
 
     await init_db()
