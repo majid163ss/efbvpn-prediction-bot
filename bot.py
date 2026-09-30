@@ -1689,6 +1689,45 @@ async def start_handler(message: Message):
                 )
             )
 
+@dp.message(Command("start"))
+async def start_handler(message: Message):
+
+    print(
+        f"🔥 START HANDLER RECEIVED | "
+        f"user={message.from_user.id} | "
+        f"text={message.text}"
+    )
+
+    # بررسی حالت بروزرسانی
+    if BOT_UPDATING:
+
+        await message.answer(
+            "🔧 ربات در حال بروزرسانی است.\n\n"
+            "لطفاً بعداً دوباره مراجعه کنید."
+        )
+
+        return
+
+    # بررسی عضویت اجباری
+    is_required_member = await check_required_chats(
+        bot,
+        message.from_user.id
+    )
+
+    if not is_required_member:
+
+        async with Session() as session:
+
+            result = await session.execute(
+                select(RequiredChat)
+                .where(
+                    RequiredChat.is_active == True
+                )
+                .order_by(
+                    RequiredChat.id.asc()
+                )
+            )
+
             required_chats = result.scalars().all()
 
         keyboard_buttons = []
@@ -1761,6 +1800,7 @@ async def start_handler(message: Message):
         if len(parts) == 2:
 
             start_param = parts[1].strip()
+
 
     # ==================================================
     # 🎯 ورود مستقیم به بخش پیش‌بینی
