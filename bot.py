@@ -1669,35 +1669,6 @@ async def start_handler(message: Message):
         f"text={message.text}"
     )
 
-    # بررسی عضویت اجباری
-    is_required_member = await check_required_chats(
-        bot,
-        message.from_user.id
-    )
-
-    if not is_required_member:
-
-        async with Session() as session:
-
-            result = await session.execute(
-                select(RequiredChat)
-                .where(
-                    RequiredChat.is_active == True
-                )
-                .order_by(
-                    RequiredChat.id.asc()
-                )
-            )
-
-@dp.message(Command("start"))
-async def start_handler(message: Message):
-
-    print(
-        f"🔥 START HANDLER RECEIVED | "
-        f"user={message.from_user.id} | "
-        f"text={message.text}"
-    )
-
     # بررسی حالت بروزرسانی
     if BOT_UPDATING:
 
