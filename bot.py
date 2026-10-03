@@ -1669,19 +1669,19 @@ async def start_handler(message: Message):
         f"text={message.text}"
     )
 
- # بررسی حالت بروزرسانی
-# قرعه‌کشی در حالت بروزرسانی همچنان فعال است
-if BOT_UPDATING and not (
-    message.text
-    and "giveaway_" in message.text
-):
+    # بررسی حالت بروزرسانی
+    # قرعه‌کشی در حالت بروزرسانی همچنان فعال است
+    if BOT_UPDATING and not (
+        message.text
+        and "giveaway_" in message.text
+    ):
 
-    await message.answer(
-        "🔧 ربات در حال بروزرسانی است.\n\n"
-        "لطفاً بعداً دوباره مراجعه کنید."
-    )
+        await message.answer(
+            "🔧 ربات در حال بروزرسانی است.\n\n"
+            "لطفاً بعداً دوباره مراجعه کنید."
+        )
 
-    return
+        return
 
     # بررسی عضویت اجباری
     is_required_member = await check_required_chats(
