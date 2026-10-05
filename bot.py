@@ -9453,6 +9453,186 @@ async def auto_draw_giveaways():
             )
 
         await asyncio.sleep(20)
+# =========================================================
+# 🔒 ثبت یک‌باره برندگان قدیمی قرعه‌کشی
+# =========================================================
+
+async def add_old_giveaway_winners_once():
+
+    old_winners = [
+        "@Benbenyben",
+        "@Hssn_Teh",
+        "@Evil_ZeXter",
+        "@BetterCallBardia",
+        "@big_mahdiyar",
+        "@mohamad_prvt",
+        "@fardin_7765",
+        "@Neymar_jr103",
+        "@Masoudraee",
+        "@YASSI_BBX",
+        "@matin82z",
+        "@efootM10",
+    ]
+
+    async with Session() as session:
+
+        # ساخت Giveaway مرجع
+        reference_giveaway = Giveaway(
+            title="ثبت برندگان قدیمی",
+            prize="مرجع محدودیت ۲۱ روزه",
+            prize_codes=None,
+            end_time=datetime(
+                2026,
+                9,
+                1,
+                0,
+                0,
+                0
+            ),
+            winner_count=len(old_winners),
+            channel_message_id=None,
+            is_active=False,
+            is_drawn=True,
+            is_announced=False,
+            post_text="ثبت داخلی برندگان قدیمی",
+        )
+
+        session.add(reference_giveaway)
+
+        await session.flush()
+
+        reference_giveaway_id = reference_giveaway.id
+
+        print(
+            f"✅ Reference giveaway created | "
+            f"id={reference_giveaway_id}"
+        )
+
+        # تاریخ شروع محدودیت
+        # ۲۱ روز بعد = ۲۰ اکتبر ۲۰۲۶
+        restriction_start = datetime(
+            2026,
+            9,
+            29,
+            0,
+            0,
+            0
+        )
+
+        found_users = []
+        not_found_users = []
+
+        for username in old_winners:
+
+            clean_username = (
+                username
+                .lstrip("@")
+                .lower()
+            )
+
+            # پیدا کردن کاربر
+            result = await session.execute(
+                select(User).where(
+                    func.lower(User.username)
+                    == clean_username
+                )
+            )
+
+            user = (
+                result
+                .scalars()
+                .first()
+            )
+
+            if not user:
+
+                not_found_users.append(
+                    username
+                )
+
+                continue
+
+            # جلوگیری از ثبت تکراری
+            existing_result = await session.execute(
+                select(GiveawayWinner).where(
+                    GiveawayWinner.giveaway_id
+                    == reference_giveaway_id,
+                    GiveawayWinner.user_id
+                    == user.id
+                )
+            )
+
+            existing_winner = (
+                existing_result
+                .scalars()
+                .first()
+            )
+
+            if existing_winner:
+
+                found_users.append(
+                    username
+                )
+
+                continue
+
+            # ثبت برنده قدیمی
+            winner = GiveawayWinner(
+                giveaway_id=reference_giveaway_id,
+                user_id=user.id,
+                prize_content="برنده قرعه‌کشی قبلی",
+                is_sent=True,
+                sent_at=restriction_start,
+                created_at=restriction_start,
+            )
+
+            session.add(winner)
+
+            found_users.append(
+                username
+            )
+
+        await session.commit()
+
+        print("")
+        print(
+            "========================================"
+        )
+        print(
+            "🔒 OLD GIVEAWAY WINNERS REGISTERED"
+        )
+        print(
+            "========================================"
+        )
+
+        print(
+            f"✅ Found / registered: "
+            f"{len(found_users)}"
+        )
+
+        for username in found_users:
+            print(
+                f"   ✅ {username}"
+            )
+
+        print(
+            f"❌ Not found: "
+            f"{len(not_found_users)}"
+        )
+
+        for username in not_found_users:
+            print(
+                f"   ❌ {username}"
+            )
+
+        print(
+            "========================================"
+        )
+
+
+# =========================================================
+# 🚀 اجرای اصلی ربات
+# =========================================================
 
 
 # =========================================================
@@ -9472,6 +9652,8 @@ async def debug_all_messages(message: Message):
 async def main():
 
     await init_db()
+
+    await add_old_giveaway_winners_once()
 
     asyncio.create_task(
         auto_lock_matches()
