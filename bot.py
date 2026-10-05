@@ -9653,7 +9653,6 @@ async def main():
 
     await init_db()
 
-    await add_old_giveaway_winners_once()
 
     asyncio.create_task(
         auto_lock_matches()
