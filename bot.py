@@ -1885,6 +1885,45 @@ async def start_handler(message: Message):
                     )
 
                     return
+                # بررسی محدودیت ۲۱ روزه برنده‌ها
+                twenty_one_days_ago = (
+                    datetime.utcnow()
+                    - timedelta(days=21)
+                )
+
+                winner_result = await session.execute(
+                    select(GiveawayWinner)
+                    .where(
+                        GiveawayWinner.user_id
+                        == message.from_user.id,
+                        GiveawayWinner.created_at
+                        > twenty_one_days_ago
+                    )
+                    .order_by(
+                        GiveawayWinner.created_at.desc()
+                    )
+                )
+
+                recent_winner = (
+                    winner_result.scalar_one_or_none()
+                )
+
+                if recent_winner:
+
+                    await message.answer(
+                        "🔒 شما اخیراً برنده قرعه‌کشی شده‌ای.\n\n"
+                        "⏳ تا پایان ۲۱ روز از آخرین بردت "
+                        "امکان شرکت در قرعه‌کشی را نداری.\n\n"
+                        "🍀 بعد از پایان این مدت دوباره می‌تونی شرکت کنی."
+                    )
+
+                    return
+
+                # ثبت شرکت کاربر
+                participant = GiveawayParticipant(
+                    giveaway_id=giveaway.id,
+                    user_id=message.from_user.id
+                )
 
                 # ثبت شرکت کاربر
                 participant = GiveawayParticipant(
