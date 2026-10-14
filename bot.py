@@ -48,8 +48,8 @@ DATABASE_URL = os.getenv(
 
 CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@EFbVpn")
 # حالت موقت ربات
-MAINTENANCE_MODE = True
-BOT_UPDATING = True
+MAINTENANCE_MODE = False
+BOT_UPDATING = False
 
 ADMIN_IDS = {
     int(x.strip())
