@@ -855,118 +855,117 @@ def get_medal(level):
 # =========================
 # SHOW MATCHES
 # =========================
+
 async def show_matches(
-message: Message,
-user_id: int | None = None
+    message: Message,
+    user_id: int | None = None
 ):
-now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
+    now = datetime.now(IRAN_TIMEZONE).replace(tzinfo=None)
 
-days_since_saturday = (now.weekday() + 2) % 7
+    days_since_saturday = (now.weekday() + 2) % 7
 
-start_of_week = (
-    now - timedelta(days=days_since_saturday)
-).replace(
-    hour=0,
-    minute=0,
-    second=0,
-    microsecond=0
-)
+    start_of_week = (
+        now - timedelta(days=days_since_saturday)
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
 
-end_of_week = start_of_week + timedelta(days=7)
+    end_of_week = start_of_week + timedelta(days=7)
 
-async with Session() as session:
+    async with Session() as session:
+        predicted_match_ids = set()
 
-    if user_id is not None:
-        user_result = await session.execute(
-            select(User).where(
-                User.telegram_id == user_id
-            )
-        )
-
-        user = user_result.scalar_one_or_none()
-
-        if user:
-            prediction_result = await session.execute(
-                select(Prediction.match_id).where(
-                    Prediction.user_id == user.id
+        if user_id is not None:
+            user_result = await session.execute(
+                select(User).where(
+                    User.telegram_id == user_id
                 )
             )
 
-            predicted_match_ids = {
-                row[0]
-                for row in prediction_result.all()
-            }
-        else:
-            predicted_match_ids = set()
-    else:
-        predicted_match_ids = set()
+            user = user_result.scalar_one_or_none()
 
-    result = await session.execute(
-        select(Match)
-        .where(
-            Match.is_finished == False,
-            Match.start_time >= start_of_week,
-            Match.start_time < end_of_week
-        )
-        .order_by(Match.start_time)
-    )
+            if user:
+                prediction_result = await session.execute(
+                    select(Prediction.match_id).where(
+                        Prediction.user_id == user.id
+                    )
+                )
 
-    matches = result.scalars().all()
+                predicted_match_ids = {
+                    row[0]
+                    for row in prediction_result.all()
+                }
 
-    matches = [
-        match
-        for match in matches
-        if match.id not in predicted_match_ids
-    ]
-
-    if not matches:
-        await message.answer(
-            "🎯 بازی پیش‌بینی‌نشده‌ای برای این هفته باقی نمونده.\n\n"
-            "🏆 با شروع هفته جدید، مسابقات جدید نمایش داده میشن.",
-            reply_markup=main_menu()
-        )
-        return
-
-    buttons = []
-
-    for match in matches:
-        locked = (
-            match.is_locked
-            or now >= match.start_time
+        result = await session.execute(
+            select(Match)
+            .where(
+                Match.is_finished == False,
+                Match.start_time >= start_of_week,
+                Match.start_time < end_of_week
+            )
+            .order_by(Match.start_time)
         )
 
-        status = "🔒" if locked else "🎯"
+        matches = result.scalars().all()
+
+        matches = [
+            match
+            for match in matches
+            if match.id not in predicted_match_ids
+        ]
+
+        if not matches:
+            await message.answer(
+                "🎯 بازی پیش‌بینی‌نشده‌ای برای این هفته باقی نمونده.\n\n"
+                "🏆 با شروع هفته جدید، مسابقات جدید نمایش داده میشن.",
+                reply_markup=main_menu()
+            )
+            return
+
+        buttons = []
+
+        for match in matches:
+            locked = (
+                match.is_locked
+                or now >= match.start_time
+            )
+
+            status = "🔒" if locked else "🎯"
+
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text=(
+                            f"{status} "
+                            f"{match.home_team} "
+                            f"🆚 "
+                            f"{match.away_team}"
+                        ),
+                        callback_data=f"match:{match.id}"
+                    )
+                ]
+            )
 
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text=(
-                        f"{status} "
-                        f"{match.home_team} "
-                        f"🆚 "
-                        f"{match.away_team}"
-                    ),
-                    callback_data=f"match:{match.id}"
+                    text="🔙 بازگشت",
+                    callback_data="home"
                 )
             ]
         )
 
-    buttons.append(
-        [
-            InlineKeyboardButton(
-                text="🔙 بازگشت",
-                callback_data="home"
+        await message.answer(
+            "🎯 مسابقات این هفته\n\n"
+            "یک بازی رو برای پیش‌بینی انتخاب کن:",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=buttons
             )
-        ]
-    )
-
-    await message.answer(
-        "🎯 مسابقات این هفته\n\n"
-        "یک بازی رو برای پیش‌بینی انتخاب کن:",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=buttons
         )
-    )
+        
 
 
 # =========================
