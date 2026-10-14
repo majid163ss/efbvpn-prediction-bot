@@ -855,8 +855,6 @@ def get_medal(level):
 # =========================
 # SHOW MATCHES
 # =========================
-
-async def show_matches(
 async def show_matches(
 message: Message,
 user_id: int | None = None
